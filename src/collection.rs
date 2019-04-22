@@ -12,7 +12,7 @@ use rustbreak::deser::Yaml;
 
 use serde_derive::{Serialize, Deserialize};
 
-use crate::config::DB_FILE;
+use karaoke::config::DB_FILE;
 
 
 lazy_static! {
