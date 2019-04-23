@@ -5,6 +5,7 @@ use std::f32::consts;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
+use std::thread;
 
 use sfml::audio::{Sound, SoundBuffer, SoundStatus};
 use sfml::graphics::{RenderWindow, Texture, RectangleShape, RenderTarget, Transformable, BlendMode, RenderStates, Transform, Color};
@@ -19,6 +20,15 @@ use crossbeam_channel::{Sender, Receiver};
 use karaoke::collection::Kfile;
 use karaoke::channel::{LiveCommand, PlayerCommand};
 use karaoke::{PLAYER_CHANNEL, LIVE_CHANNEL};
+
+pub fn run() {
+    thread::spawn(move || {
+        println!("Initializing Player...");
+        let player = Player::new();
+        println!("Running Player...");
+        player.run();
+    });
+}
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum PlayerStatus {
@@ -69,10 +79,12 @@ impl Player {
     }
 
     pub fn play(&self, kfile: Kfile) {
+        std::thread::sleep(Duration::from_millis(100));
         if *self.status.borrow() == PlayerStatus::Playing {
             self.stop();
         }
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(100));
+        self.empty_stale_live();
         self.play_song(kfile).unwrap();
         self.window.borrow_mut().clear(&self.background_color);
         self.window.borrow_mut().display(); 
@@ -80,10 +92,15 @@ impl Player {
 
     fn process_cmd(&self, cmd: PlayerCommand) {
         match cmd {
-            PlayerCommand::PlayNow { kfile } => self.play(kfile),
-            PlayerCommand::Stop => self.stop(),
-            _ => println!("nothing"),
+            PlayerCommand::Play { kfile } => self.play(kfile),
         }
+    }
+
+    fn empty_stale_live(&self) {
+        select! {
+            recv(self.live_receiver) -> _ => println!("Clearing stale command in live channel."),
+            default() => println!("No stale command in live channel."),
+        };
     }
 
     fn play_song(&self, kfile: Kfile) -> io::Result<()> {
@@ -142,7 +159,7 @@ impl Player {
         let mut res_image = image::RgbaImage::new(300,216);
 
         song.play();
-        'running: loop {    
+        loop {    
             let track_pos = song.playing_offset().as_milliseconds() as isize;
             let calc_sector = (track_pos as f32 / 13.33333333).floor() as isize - 15;
             
@@ -215,7 +232,3 @@ impl Player {
         }
     }    
 }
-
-
-
-

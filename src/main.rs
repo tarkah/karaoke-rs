@@ -6,11 +6,14 @@ mod collection;
 mod player;
 mod config;
 mod channel;
+mod worker;
+mod queue;
 
 use karaoke::config::{CONFIG};
 use karaoke::player::Player;
-use karaoke::collection::{COLLECTION};
-use karaoke::channel::{LiveCommand, PlayerCommand, LIVE_CHANNEL, PLAYER_CHANNEL};
+use karaoke::collection::{COLLECTION, Kfile};
+use karaoke::channel::{WorkerCommand, LiveCommand, PlayerCommand, WORKER_CHANNEL, LIVE_CHANNEL, PLAYER_CHANNEL};
+use karaoke::queue::PLAY_QUEUE;
 
 use std::thread;
 use std::time::Duration;
@@ -27,22 +30,36 @@ fn test_play() {
         CONFIG.read(|conf| (conf.data_path.clone(), conf.allow_overwrite.clone())).expect("Read config");
     println!("The current configuration is: {:?} and {}", data_path, allow_overwrite);    
 
-    thread::spawn(move || {
-        println!("Initializing Player...");
-        let player = Player::new();
-        println!("Running Player...");
-        player.run();
-    });    
+    player::run();
+    worker::run();
     
+    let mut q_len = 0;
     for k in COLLECTION.iter() {
         let kfile = k.clone();
-        println!("Playing: {:?}", kfile.key);
-        PLAYER_CHANNEL.0.send(PlayerCommand::PlayNow { kfile: kfile }).unwrap();        
-        std::thread::sleep(Duration::from_millis(1000));
-        println!("Stopping...");
-        LIVE_CHANNEL.0.send(LiveCommand::Stop).unwrap();
-        std::thread::sleep(Duration::from_millis(500));
-    } 
+        let mut queue = PLAY_QUEUE.lock().unwrap();
+        queue.push(kfile);   
+        q_len += 1     
+    }
+
+    for x in 0..q_len {
+        if x==0 {
+            let mut kfile: Kfile;
+            { kfile = PLAY_QUEUE.lock().unwrap().remove(0); }
+            WORKER_CHANNEL.0.send(WorkerCommand::PlayNow { kfile }).unwrap(); 
+            std::thread::sleep(Duration::from_millis(2000));  
+        } else if x<4 {
+            WORKER_CHANNEL.0.send(WorkerCommand::Next).unwrap();        
+            std::thread::sleep(Duration::from_millis(2000));
+        } else if x==4 {
+            WORKER_CHANNEL.0.send(WorkerCommand::ClearQueue).unwrap();
+            WORKER_CHANNEL.0.send(WorkerCommand::Next).unwrap();
+            std::thread::sleep(Duration::from_millis(2000));
+        } else {
+            WORKER_CHANNEL.0.send(WorkerCommand::Next).unwrap();
+            std::thread::sleep(Duration::from_millis(2000));
+            WORKER_CHANNEL.0.send(WorkerCommand::Stop).unwrap();
+        }
+    }    
 }
 
 #[allow(dead_code)]
