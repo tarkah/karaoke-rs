@@ -119,9 +119,19 @@ impl Kfile {
         let file_name = path.file_name().unwrap().to_str().unwrap();
 
         let tag = Tag::read_from_path(&mp3_path).unwrap_or(id3::Tag::new());
-        let artist = tag.artist().unwrap_or("<None>").to_string();
+        let mut artist = tag.artist().unwrap_or("<None>").to_string();
+        let mut song: String;
+
+        if artist=="<None>" {
+            let (parsed_artist,  parsed_song) = song_parse(file_name);
+            artist = parsed_artist;
+            song = parsed_song;
+
+        }  else {
+            song = tag.title().unwrap_or(file_name).to_string();                   
+        }
+        
         let artist_hash = calculate_hash(&artist);
-        let song = tag.title().unwrap_or(file_name).to_string();
 
         Kfile { mp3_path, cdg_path, artist, artist_hash, song }
     }   
@@ -139,6 +149,14 @@ impl Default for Kfile {
     }
 }
 
+fn song_parse(file_name: &str) -> (String, String) {
+    let mut split: Vec<&str> = file_name.split(" - ").collect();
+    
+    let song = split.pop().unwrap_or(file_name);
+    let artist = split.pop().unwrap_or("<None>");
+
+    (artist.to_string(), song.to_string())    
+}
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();

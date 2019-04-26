@@ -18,5 +18,5 @@ mod site;
 fn main() {
     player::run();
     worker::run();
-    karaoke::site::run();      
+    karaoke::site::run();
 }
