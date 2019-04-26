@@ -8,55 +8,47 @@
 // allow_overwrite: true
 // ```
 //
-use std::path::PathBuf;
-use std::default::Default;
-use rustbreak::FileDatabase;
-use rustbreak::deser::Yaml;
-use std::fs::DirBuilder;
 use dirs::{config_dir, data_dir};
+use rustbreak::{deser::Yaml, FileDatabase};
 use serde_derive::{Deserialize, Serialize};
+use std::{default::Default, fs::DirBuilder, path::PathBuf};
 
 type DB = FileDatabase<Config, Yaml>;
 
 lazy_static! {
-    pub static ref CONF_DIR: PathBuf = { 
+    pub static ref CONF_DIR: PathBuf = {
         let mut dir = config_dir().unwrap();
         dir.push("karaoke-rs");
         DirBuilder::new()
-               .recursive(true)
-               .create(dir.clone())
-               .unwrap();
+            .recursive(true)
+            .create(dir.clone())
+            .unwrap();
         dir
     };
-
-    pub static ref CONF_FILE: PathBuf = { 
+    pub static ref CONF_FILE: PathBuf = {
         let mut path = CONF_DIR.to_path_buf();
         path.push("config.yaml");
         path
     };
-
-    pub static ref DATA_DIR: PathBuf = { 
+    pub static ref DATA_DIR: PathBuf = {
         let mut dir = data_dir().unwrap();
         dir.push("karaoke-rs");
         DirBuilder::new()
-               .recursive(true)
-               .create(dir.clone())
-               .unwrap();
+            .recursive(true)
+            .create(dir.clone())
+            .unwrap();
         dir
-    };   
-
-    pub static ref SONG_DIR: PathBuf = { 
+    };
+    pub static ref SONG_DIR: PathBuf = {
         let mut dir = DATA_DIR.to_path_buf();
-        dir.push("songs");        
+        dir.push("songs");
         dir
-    }; 
-
-    pub static ref DB_FILE: PathBuf = { 
+    };
+    pub static ref DB_FILE: PathBuf = {
         let mut path = DATA_DIR.to_path_buf();
         path.push("db.yaml");
         path
     };
-
     pub static ref CONFIG: DB = {
         let mut db: DB;
         if !CONF_FILE.to_path_buf().exists() {

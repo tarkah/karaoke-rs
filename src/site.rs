@@ -1,23 +1,27 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::thread::sleep;
-use std::time::Duration;
-use std::path::{PathBuf, Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    thread::sleep,
+    time::Duration,
+};
 
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
-use rocket::response::{Redirect, NamedFile};
-use rocket::request::Form;
-use rocket::State;
-use rocket_contrib::templates::Template;
-use rocket_contrib::json::{JsonValue};
+use rocket::{
+    request::Form,
+    response::{NamedFile, Redirect},
+    State,
+};
+use rocket_contrib::{json::JsonValue, templates::Template};
 
 use crossbeam_channel::Sender;
 
-use karaoke::collection::{COLLECTION, Collection, Kfile};
-use karaoke::channel::{WORKER_CHANNEL, WorkerCommand};
-use karaoke::queue::PLAY_QUEUE;
-
+use karaoke::{
+    channel::{WorkerCommand, WORKER_CHANNEL},
+    collection::{Collection, Kfile, COLLECTION},
+    queue::PLAY_QUEUE,
+};
 
 #[derive(FromForm)]
 struct Song {
@@ -44,7 +48,7 @@ fn songs(collection: State<Collection>) -> Template {
 #[get("/artists")]
 fn artists(collection: State<Collection>) -> Template {
     let context = collection.inner();
-    
+
     Template::render("artists", &context)
 }
 
@@ -67,57 +71,65 @@ fn queue(queue: State<Arc<Mutex<Vec<Kfile>>>>) -> Template {
     Template::render("queue", &queue)
 }
 
-#[post("/api/add", data= "<form>")]
-fn add(form: Form<Song>, collection: State<Collection>, worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {
+#[post("/api/add", data = "<form>")]
+fn add(
+    form: Form<Song>,
+    collection: State<Collection>,
+    worker_sender: State<Sender<WorkerCommand>>,
+) -> JsonValue {
     let hash = form.hash;
     let collection = collection.inner();
-    let kfile = collection.by_song.get(&hash).unwrap().clone();    
+    let kfile = collection.by_song.get(&hash).unwrap().clone();
     let cmd = WorkerCommand::AddQueue { kfile };
-    worker_sender.send(cmd).unwrap();    
+    worker_sender.send(cmd).unwrap();
 
     json!({ "status": "ok" })
 }
 
-#[post("/api/playnow", data= "<form>")]
-fn playnow(form: Form<Song>, collection: State<Collection>, worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {
+#[post("/api/playnow", data = "<form>")]
+fn playnow(
+    form: Form<Song>,
+    collection: State<Collection>,
+    worker_sender: State<Sender<WorkerCommand>>,
+) -> JsonValue {
     let hash = form.hash;
     let collection = collection.inner();
-    let kfile = collection.by_song.get(&hash).unwrap().clone();    
+    let kfile = collection.by_song.get(&hash).unwrap().clone();
     let cmd = WorkerCommand::PlayNow { kfile };
-    worker_sender.send(cmd).unwrap();    
+    worker_sender.send(cmd).unwrap();
 
     json!({ "status": "ok" })
 }
 
 #[post("/api/next")]
-fn next(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {    
+fn next(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {
     let cmd = WorkerCommand::Next;
-    worker_sender.send(cmd).unwrap(); 
+    worker_sender.send(cmd).unwrap();
 
     sleep(Duration::from_millis(500));
     json!({ "status": "ok" })
 }
 
 #[post("/api/clear")]
-fn clear(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {    
+fn clear(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {
     let cmd = WorkerCommand::ClearQueue;
-    worker_sender.send(cmd).unwrap(); 
+    worker_sender.send(cmd).unwrap();
 
     sleep(Duration::from_millis(500));
     json!({ "status": "ok" })
 }
 
 #[post("/api/stop")]
-fn stop(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {    
+fn stop(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {
     let cmd = WorkerCommand::Stop;
-    worker_sender.send(cmd).unwrap(); 
+    worker_sender.send(cmd).unwrap();
 
     sleep(Duration::from_millis(500));
     json!({ "status": "ok" })
 }
 
-#[get("/static/<file..>", rank=1)]
-fn static_files(file: PathBuf) -> Option<NamedFile>{
+#[get("/static/<file..>", rank = 1)]
+fn static_files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static").join(file)).ok()
 }
 
@@ -132,12 +144,27 @@ fn rocket() -> rocket::Rocket {
     let queue = PLAY_QUEUE.clone();
 
     rocket::ignite()
-            .mount("/", routes![index, songs, artists, artist, queue, add, next, playnow, clear, stop, static_files])
-            .attach(Template::fairing())
-            .register(catchers![not_found])     
-            .manage(collection)  
-            .manage(worker_sender)
-            .manage(queue)
+        .mount(
+            "/",
+            routes![
+                index,
+                songs,
+                artists,
+                artist,
+                queue,
+                add,
+                next,
+                playnow,
+                clear,
+                stop,
+                static_files
+            ],
+        )
+        .attach(Template::fairing())
+        .register(catchers![not_found])
+        .manage(collection)
+        .manage(worker_sender)
+        .manage(queue)
 }
 
 pub fn run() {

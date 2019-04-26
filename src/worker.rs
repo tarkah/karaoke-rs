@@ -1,12 +1,17 @@
-use std::thread;
-use std::time;
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    thread, time,
+};
 
-use crossbeam_channel::{Sender, Receiver};
+use crossbeam_channel::{Receiver, Sender};
 
-use karaoke::collection::Kfile;
-use karaoke::channel::{WorkerCommand, PlayerCommand, LiveCommand, WORKER_CHANNEL, PLAYER_CHANNEL, LIVE_CHANNEL};
-use karaoke::queue::PLAY_QUEUE;
+use karaoke::{
+    channel::{
+        LiveCommand, PlayerCommand, WorkerCommand, LIVE_CHANNEL, PLAYER_CHANNEL, WORKER_CHANNEL,
+    },
+    collection::Kfile,
+    queue::PLAY_QUEUE,
+};
 
 pub fn run() {
     thread::spawn(move || {
@@ -35,13 +40,18 @@ impl Worker {
         let player_sender = PLAYER_CHANNEL.0.clone();
         let live_sender = LIVE_CHANNEL.0.clone();
         let queue = PLAY_QUEUE.clone();
-        Worker { worker_receiver, player_sender, live_sender, queue }
+        Worker {
+            worker_receiver,
+            player_sender,
+            live_sender,
+            queue,
+        }
     }
 
     fn process_cmd(&self, cmd: WorkerCommand) {
         match cmd {
-            WorkerCommand::Stop => self.stop(),  
-            WorkerCommand::Next => self.next(),  
+            WorkerCommand::Stop => self.stop(),
+            WorkerCommand::Next => self.next(),
             WorkerCommand::PlayNow { kfile } => self.play_now(kfile),
             WorkerCommand::ClearQueue => self.clear_queue(),
             WorkerCommand::AddQueue { kfile } => self.add_queue(kfile),
@@ -50,17 +60,17 @@ impl Worker {
 
     fn stop(&self) {
         self.clear_queue();
-        
+
         if self.live_sender.is_empty() {
             self.live_sender.send(LiveCommand::Stop).unwrap();
         }
     }
 
-    fn next(&self) {     
+    fn next(&self) {
         let queue = self.queue.lock().unwrap();
         if queue.is_empty() {
             drop(queue);
-            return
+            return;
         }
         drop(queue);
         self.live_sender.send(LiveCommand::Stop).unwrap();
@@ -68,7 +78,9 @@ impl Worker {
 
     fn play_now(&self, kfile: Kfile) {
         self.live_sender.send(LiveCommand::Stop).unwrap();
-        self.player_sender.send(PlayerCommand::Play { kfile }).unwrap();
+        self.player_sender
+            .send(PlayerCommand::Play { kfile })
+            .unwrap();
     }
 
     fn clear_queue(&self) {
@@ -83,4 +95,3 @@ impl Worker {
         drop(queue);
     }
 }
-

@@ -1,26 +1,23 @@
-use std::result::Result;
-use std::path::PathBuf;
-use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::default::Default;
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    default::Default,
+    hash::{Hash, Hasher},
+    path::PathBuf,
+    result::Result,
+};
 
 use glob::glob;
 
 use id3::Tag;
 
-use rustbreak::FileDatabase;
-use rustbreak::deser::Yaml;
+use rustbreak::{deser::Yaml, FileDatabase};
 
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
-use karaoke::config::{DB_FILE,SONG_DIR};
-
+use karaoke::config::{DB_FILE, SONG_DIR};
 
 lazy_static! {
-    pub static ref COLLECTION: Collection = {
-        startup().unwrap()
-    };
+    pub static ref COLLECTION: Collection = { startup().unwrap() };
 }
 
 fn all_cdg() -> Vec<PathBuf> {
@@ -31,7 +28,7 @@ fn all_cdg() -> Vec<PathBuf> {
     for file in glob(&glob_str).unwrap().filter_map(Result::ok) {
         vec.push(file);
     }
-    vec    
+    vec
 }
 
 fn valid_cdg_mp3_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
@@ -46,7 +43,6 @@ fn valid_cdg_mp3_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     valid
 }
 
-
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct Collection {
     pub by_song: HashMap<u64, Kfile>,
@@ -55,22 +51,24 @@ pub struct Collection {
 
 impl Collection {
     fn new(vec_kfile: Vec<Kfile>) -> Collection {
-
         let mut by_song = HashMap::new();
         let mut by_artist = HashMap::new();
 
         //Insert each song into by_song map; put all artist names into Vec.
-        let mut artists: Vec<String> = vec_kfile.iter().map(|k| {
-            by_song.insert( calculate_hash(&k) , k.clone() );
-            k.artist.clone()
-        }).collect();
-        
+        let mut artists: Vec<String> = vec_kfile
+            .iter()
+            .map(|k| {
+                by_song.insert(calculate_hash(&k), k.clone());
+                k.artist.clone()
+            })
+            .collect();
+
         //Get unique artist names
         artists.dedup();
-        
+
         //Create Artist for each artist name, with empty song map
         for artist in artists {
-            by_artist.insert( calculate_hash(&artist) , Artist::new(artist) );
+            by_artist.insert(calculate_hash(&artist), Artist::new(artist));
         }
 
         //Insert applicable songs into each artist song map
@@ -85,7 +83,6 @@ impl Collection {
         }
 
         Collection { by_song, by_artist }
-        
     }
 }
 
@@ -99,7 +96,11 @@ pub struct Artist {
 impl Artist {
     fn new(name: String) -> Artist {
         let songs = HashMap::new();
-        Artist { songs, num_songs: 0, name }
+        Artist {
+            songs,
+            num_songs: 0,
+            name,
+        }
     }
 }
 
@@ -109,7 +110,7 @@ pub struct Kfile {
     pub cdg_path: PathBuf,
     pub artist: String,
     pub artist_hash: u64,
-    pub song: String
+    pub song: String,
 }
 
 impl Kfile {
@@ -122,25 +123,30 @@ impl Kfile {
         let mut artist = tag.artist().unwrap_or("<None>").to_string();
         let mut song: String;
 
-        if artist=="<None>" {
-            let (parsed_artist,  parsed_song) = song_parse(file_name);
+        if artist == "<None>" {
+            let (parsed_artist, parsed_song) = song_parse(file_name);
             artist = parsed_artist;
             song = parsed_song;
-
-        }  else {
-            song = tag.title().unwrap_or(file_name).to_string();                   
+        } else {
+            song = tag.title().unwrap_or(file_name).to_string();
         }
-        
+
         let artist_hash = calculate_hash(&artist);
 
-        Kfile { mp3_path, cdg_path, artist, artist_hash, song }
-    }   
+        Kfile {
+            mp3_path,
+            cdg_path,
+            artist,
+            artist_hash,
+            song,
+        }
+    }
 }
 
 impl Default for Kfile {
     fn default() -> Kfile {
         Kfile {
-            mp3_path: PathBuf::new(), 
+            mp3_path: PathBuf::new(),
             cdg_path: PathBuf::new(),
             artist: String::from(""),
             artist_hash: calculate_hash(&String::from("")),
@@ -151,11 +157,11 @@ impl Default for Kfile {
 
 fn song_parse(file_name: &str) -> (String, String) {
     let mut split: Vec<&str> = file_name.split(" - ").collect();
-    
+
     let song = split.pop().unwrap_or(file_name);
     let artist = split.pop().unwrap_or("<None>");
 
-    (artist.to_string(), song.to_string())    
+    (artist.to_string(), song.to_string())
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -164,10 +170,9 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
     s.finish()
 }
 
-
 pub fn startup() -> Result<Collection, failure::Error> {
     let cdg_files = all_cdg();
-    let valid = valid_cdg_mp3_paths(cdg_files); 
+    let valid = valid_cdg_mp3_paths(cdg_files);
 
     let db_file = DB_FILE.to_path_buf();
     let mut db: FileDatabase<HashMap<u64, Kfile>, Yaml>;
@@ -180,12 +185,12 @@ pub fn startup() -> Result<Collection, failure::Error> {
         db.save()?;
         db.load()?;
     }
-    
+
     let mut existing_keys = Vec::new();
-    db.read(|db| {        
+    db.read(|db| {
         for key in db.keys() {
             existing_keys.push(key.clone());
-        }    
+        }
     })?;
 
     let mut valid_kfiles = Vec::new();
@@ -193,21 +198,34 @@ pub fn startup() -> Result<Collection, failure::Error> {
         let kfile = Kfile::new(path);
         valid_kfiles.push(kfile);
     }
-    
-    let missing_valid_keys_to_remove: Vec<u64> = existing_keys.iter().filter_map(|k| {
-        let valid_keys: Vec<u64> = valid_kfiles.iter().map(|x| { calculate_hash(&x) }).collect();
-        if valid_keys.contains(&k) {
-            None
-        } else { Some(k.clone()) }
-    }).collect();
 
-    let valid_kfiles_to_add: Vec<Kfile> = valid_kfiles.iter().filter_map(|k| {
-        if !existing_keys[..].contains(&calculate_hash(&k)) {
-            Some(k.clone())
-        } else { None }
-    }).collect();
+    let missing_valid_keys_to_remove: Vec<u64> = existing_keys
+        .iter()
+        .filter_map(|k| {
+            let valid_keys: Vec<u64> = valid_kfiles.iter().map(|x| calculate_hash(&x)).collect();
+            if valid_keys.contains(&k) {
+                None
+            } else {
+                Some(k.clone())
+            }
+        })
+        .collect();
 
-    println!("Invalid songs removed: {}", missing_valid_keys_to_remove.len());
+    let valid_kfiles_to_add: Vec<Kfile> = valid_kfiles
+        .iter()
+        .filter_map(|k| {
+            if !existing_keys[..].contains(&calculate_hash(&k)) {
+                Some(k.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    println!(
+        "Invalid songs removed: {}",
+        missing_valid_keys_to_remove.len()
+    );
     println!("New songs added: {}", valid_kfiles_to_add.len());
 
     db.write(|db| {
@@ -216,17 +234,17 @@ pub fn startup() -> Result<Collection, failure::Error> {
         }
         for kfile in valid_kfiles_to_add {
             let key = calculate_hash(&kfile);
-            db.insert(key, kfile);   
-        }        
+            db.insert(key, kfile);
+        }
     })?;
 
     db.save()?;
 
     let mut _collection = Vec::new();
-    db.read(|db| {        
+    db.read(|db| {
         for value in db.values() {
             _collection.push(value.clone());
-        }    
+        }
     })?;
 
     let collection = Collection::new(_collection);
