@@ -1,5 +1,6 @@
 use std::thread;
 use std::time;
+use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::{Sender, Receiver};
 
@@ -15,7 +16,7 @@ pub fn run() {
                 recv(worker.worker_receiver) -> cmd => worker.process_cmd(cmd.unwrap()),
                 default() => {},
             }
-            thread::sleep(time::Duration::from_millis(500));
+            thread::sleep(time::Duration::from_millis(50));
         }
     });
 }
@@ -25,6 +26,7 @@ struct Worker {
     worker_receiver: Receiver<WorkerCommand>,
     player_sender: Sender<PlayerCommand>,
     live_sender: Sender<LiveCommand>,
+    queue: Arc<Mutex<Vec<Kfile>>>,
 }
 
 impl Worker {
@@ -32,7 +34,8 @@ impl Worker {
         let worker_receiver = WORKER_CHANNEL.1.clone();
         let player_sender = PLAYER_CHANNEL.0.clone();
         let live_sender = LIVE_CHANNEL.0.clone();
-        Worker { worker_receiver, player_sender, live_sender }
+        let queue = PLAY_QUEUE.clone();
+        Worker { worker_receiver, player_sender, live_sender, queue }
     }
 
     fn process_cmd(&self, cmd: WorkerCommand) {
@@ -46,19 +49,21 @@ impl Worker {
     }
 
     fn stop(&self) {
+        self.clear_queue();
+        
         if self.live_sender.is_empty() {
             self.live_sender.send(LiveCommand::Stop).unwrap();
         }
     }
 
     fn next(&self) {     
-        let mut queue = PLAY_QUEUE.lock().unwrap();
+        let queue = self.queue.lock().unwrap();
         if queue.is_empty() {
+            drop(queue);
             return
         }
+        drop(queue);
         self.live_sender.send(LiveCommand::Stop).unwrap();
-        let kfile = queue.remove(0);
-        self.player_sender.send(PlayerCommand::Play{ kfile }).unwrap();
     }
 
     fn play_now(&self, kfile: Kfile) {
@@ -67,13 +72,15 @@ impl Worker {
     }
 
     fn clear_queue(&self) {
-        let mut queue = PLAY_QUEUE.lock().unwrap();
+        let mut queue = self.queue.lock().unwrap();
         queue.clear();
+        drop(queue);
     }
 
     fn add_queue(&self, kfile: Kfile) {
-        let mut queue = PLAY_QUEUE.lock().unwrap();
+        let mut queue = self.queue.lock().unwrap();
         queue.push(kfile);
+        drop(queue);
     }
 }
 

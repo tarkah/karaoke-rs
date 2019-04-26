@@ -1,0 +1,10 @@
+{% extends "base" %}
+
+{% block content %}
+<div class="mt-2">
+    <h3>Welcome to this simple karaoke site!</h3>
+    
+    <p>Add songs to the queue or play now to skip to the front.</p>    
+</div>
+
+{% endblock content %}

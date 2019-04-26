@@ -21,18 +21,16 @@ lazy_static! {
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum WorkerCommand {
-    Stop,  //Upon receive, sends LiveCommand::Stop to Live Channel
-    Next,  //Upon receive, sends LiveCommand::Stop to Live Channel, gets next song in queue,
-           // then sends PlayerCommand::Play to Player Channel. If queue empty, doesn't send Play.
-    PlayNow { kfile: Kfile },   //Upon receive, sends LiveCommand::Stop to Live Channel,
-                                // send PlayerCommand::Play to Player Channel with applicable song
-    ClearQueue,  //Upon receive, clears play queue
-    AddQueue { kfile: Kfile },  //Upon receive, adds song to play queue
+    Stop,
+    Next,
+    PlayNow { kfile: Kfile },
+    ClearQueue,
+    AddQueue { kfile: Kfile },
 }
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum PlayerCommand {
-    Play { kfile: Kfile },  //Triggered by ManagerCommand::{PlayNow, Next}
+    Play { kfile: Kfile },
 }
 
 #[derive(Eq, PartialEq, Debug)]

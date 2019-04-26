@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 use std::thread;
+use std::sync::{Arc, Mutex};
 
 use sfml::audio::{Sound, SoundBuffer, SoundStatus};
 use sfml::graphics::{RenderWindow, Texture, RectangleShape, RenderTarget, Transformable, BlendMode, RenderStates, Transform, Color};
@@ -19,13 +20,12 @@ use crossbeam_channel::{Sender, Receiver};
 
 use karaoke::collection::Kfile;
 use karaoke::channel::{LiveCommand, PlayerCommand};
-use karaoke::{PLAYER_CHANNEL, LIVE_CHANNEL};
+use karaoke::channel::{PLAYER_CHANNEL, LIVE_CHANNEL};
+use karaoke::queue::PLAY_QUEUE;
 
 pub fn run() {
     thread::spawn(move || {
-        println!("Initializing Player...");
-        let player = Player::new();
-        println!("Running Player...");
+        let player = Player::new();        
         player.run();
     });
 }
@@ -44,6 +44,7 @@ pub struct Player {
     pub player_receiver: Receiver<PlayerCommand>,
     pub live_sender: Sender<LiveCommand>,
     pub live_receiver: Receiver<LiveCommand>,
+    pub queue: Arc<Mutex<Vec<Kfile>>>,
     pub background_color: Color,
     //pub queue: Vec<[Kfile]>,
 }
@@ -57,25 +58,37 @@ impl Player {
             &ContextSettings::default(),
         );
         let window = Rc::from(RefCell::from(win));
-        //let window = Arc::from(Mutex::from(win));
         let status = Rc::from(RefCell::from(PlayerStatus::Stopped));
+        let queue = PLAY_QUEUE.clone();
         Player { window: window, status: status,
                 player_sender: PLAYER_CHANNEL.0.clone(), player_receiver: PLAYER_CHANNEL.1.clone(),
                 live_sender: LIVE_CHANNEL.0.clone(), live_receiver: LIVE_CHANNEL.1.clone(),
-                background_color: Color::BLACK}
+                queue, background_color: Color::BLACK }
     }
 
     pub fn run(&self) {
         loop {
             select! {
                 recv(self.player_receiver) -> cmd => self.process_cmd(cmd.unwrap()),
+                default() => self.check_queue(),
             };
-            std::thread::sleep(Duration::from_millis(1000));
+            std::thread::sleep(Duration::from_millis(50));
         }        
     }
 
     pub fn stop(&self) {
         self.live_sender.send(LiveCommand::Stop).unwrap();        
+    }
+
+    pub fn check_queue(&self) {
+        let mut queue = self.queue.lock().unwrap();
+        if queue.is_empty() {
+            drop(queue);
+            return
+        }
+        let kfile = queue.remove(0);
+        drop(queue);
+        self.play(kfile);
     }
 
     pub fn play(&self, kfile: Kfile) {
@@ -98,8 +111,8 @@ impl Player {
 
     fn empty_stale_live(&self) {
         select! {
-            recv(self.live_receiver) -> _ => println!("Clearing stale command in live channel."),
-            default() => println!("No stale command in live channel."),
+            recv(self.live_receiver) -> _ => { },
+            default() => { },
         };
     }
 
@@ -161,7 +174,7 @@ impl Player {
         song.play();
         loop {    
             let track_pos = song.playing_offset().as_milliseconds() as isize;
-            let calc_sector = (track_pos as f32 / 13.33333333).floor() as isize - 15;
+            let calc_sector = (track_pos as f32 / 13.33333333).floor() as isize - 27;
             
             if calc_sector >= 0 {
                 sectors_since = calc_sector - last_sector_no;         

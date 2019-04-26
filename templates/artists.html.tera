@@ -1,0 +1,28 @@
+{% extends "base" %}
+
+{% block content %}
+
+<div class="justify-content-center">
+<table id="datatable" class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th scope="col">Artist</th>
+            <th scope="col" class="text-center"># Songs</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, artist in by_artist %}
+        <tr>
+            <td>
+                <a href="/artist/{{ key }}">
+                    {{ artist.name }}
+                </a>
+            </td>     
+            <td class="text-center">{{ artist.num_songs }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% endblock content %}

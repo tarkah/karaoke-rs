@@ -2,3 +2,4 @@
 **/*.rs.bk
 test.yaml
 /songs
+Rocket.toml

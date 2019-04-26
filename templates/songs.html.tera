@@ -1,0 +1,36 @@
+{% extends "base" %}
+
+{% block content %}
+
+<div class="justify-content-center">
+<table id="datatable" class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th scope="col">Song</th>
+            <th scope="col" class="text-center">Artist</th>
+            <th scope="col"></th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, kfile in by_song %}
+        <tr>
+            <td>{{ kfile.song }}</td>
+            <td class="text-center">
+                <a href="/artist/{{ kfile.artist_hash }}">
+                    {{ kfile.artist }}
+                </a>
+            </td> 
+            <td class="text-center">
+                <button onclick="addQueue(this)" value="{{ key }}" class="btn btn-secondary btn-sm active" role="button" aria-pressed="true">Add</button>
+            </td>
+            <td class="text-center">
+                <button onclick="playNow(this)" value="{{ key }}" class="btn btn-primary btn-sm active" role="button" aria-pressed="true">Play</button>
+            </td>         
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% endblock content %}

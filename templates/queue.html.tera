@@ -1,0 +1,40 @@
+{% extends "base" %}
+
+{% block content %}
+    <div class="row text-center mt-1 mb-3">
+        <div class="col">
+            <button onclick="clearQueue(this)" class="btn btn-secondary btn-sm active btn-block" role="button" aria-pressed="true">Clear Queue</button>
+        </div>
+        <div class="col">
+            <button onclick="next(this)" class="btn btn-primary btn-sm active btn-block" role="button" aria-pressed="true">Next Song</button>
+        </div>
+        <div class="col">
+            <button onclick="stop(this)" class="btn btn-warning btn-sm active btn-block" role="button" aria-pressed="true">Stop</button>
+        </div>      
+    </div>
+
+    <div class="justify-content-center">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Song</th>
+                <th scope="col text-center">Artist</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kfile in queue %}
+            <tr>
+                <th scope="row">{{ loop.index }}</th>
+                <td>{{ kfile.song }}</td>
+                <td class="text-center">
+                    <a href="/artist/{{ kfile.artist_hash }}">
+                        {{ kfile.artist }}
+                    </a>
+                </td>          
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+{% endblock content %}

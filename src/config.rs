@@ -43,7 +43,13 @@ lazy_static! {
                .create(dir.clone())
                .unwrap();
         dir
-    };    
+    };   
+
+    pub static ref SONG_DIR: PathBuf = { 
+        let mut dir = DATA_DIR.to_path_buf();
+        dir.push("songs");        
+        dir
+    }; 
 
     pub static ref DB_FILE: PathBuf = { 
         let mut path = DATA_DIR.to_path_buf();
