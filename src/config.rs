@@ -1,10 +1,10 @@
 // This just reads an example configuration.
 // If it doesn't find one, it uses your default configuration
 //
-// You can create one by writing this file to `$XDG_CONFIG_HOME/rkaraoke/config.yaml`:
+// You can create one by writing this file to `$XDG_CONFIG_HOME/karaoke-rs/config.yaml`:
 // ```
 // ---
-// data_path: $XDG_DATA_HOME/rkaraoke
+// data_path: $XDG_DATA_HOME/karaoke-rs
 // allow_overwrite: true
 // ```
 //
@@ -21,7 +21,7 @@ type DB = FileDatabase<Config, Yaml>;
 lazy_static! {
     pub static ref CONF_DIR: PathBuf = { 
         let mut dir = config_dir().unwrap();
-        dir.push("rkaraoke");
+        dir.push("karaoke-rs");
         DirBuilder::new()
                .recursive(true)
                .create(dir.clone())
@@ -37,7 +37,7 @@ lazy_static! {
 
     pub static ref DATA_DIR: PathBuf = { 
         let mut dir = data_dir().unwrap();
-        dir.push("rkaraoke");
+        dir.push("karaoke-rs");
         DirBuilder::new()
                .recursive(true)
                .create(dir.clone())

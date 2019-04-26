@@ -7,7 +7,7 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 ## Setup
 - Install SFML and CSFML bindings to run.
 - Compile from source -- `cargo build --release`
-- Place your song collection at -- `~/.local/share/rkaraoke/songs`
+- Place your song collection at -- `~/.local/share/karaoke-rs/songs`
 
 
 ## TODO
