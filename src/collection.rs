@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
+    collections::{hash_map::DefaultHasher, HashMap, HashSet},
     default::Default,
     hash::{Hash, Hasher},
     path::PathBuf,
@@ -54,17 +54,14 @@ impl Collection {
         let mut by_song = HashMap::new();
         let mut by_artist = HashMap::new();
 
-        //Insert each song into by_song map; put all artist names into Vec.
-        let mut artists: Vec<String> = vec_kfile
-            .iter()
+        //Insert each song into by_song map; collect unique all artist names
+        let artists: HashSet<String> = vec_kfile
+            .into_iter()
             .map(|k| {
                 by_song.insert(calculate_hash(&k), k.clone());
-                k.artist.clone()
+                k.artist
             })
             .collect();
-
-        //Get unique artist names
-        artists.dedup();
 
         //Create Artist for each artist name, with empty song map
         for artist in artists {
