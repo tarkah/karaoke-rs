@@ -14,7 +14,7 @@ use rustbreak::{deser::Yaml, FileDatabase};
 
 use serde_derive::{Deserialize, Serialize};
 
-use karaoke::config::{DB_FILE, SONG_DIR};
+use karaoke::CONFIG;
 
 lazy_static! {
     pub static ref COLLECTION: Collection = { startup().unwrap() };
@@ -22,7 +22,7 @@ lazy_static! {
 
 fn all_cdg() -> Vec<PathBuf> {
     let mut vec = Vec::new();
-    let mut glob_path = SONG_DIR.to_path_buf();
+    let mut glob_path = CONFIG.song_path.to_path_buf();
     glob_path.push("**/*.cdg");
     let glob_str = glob_path.display().to_string();
     for file in glob(&glob_str).unwrap().filter_map(Result::ok) {
@@ -171,7 +171,8 @@ pub fn startup() -> Result<Collection, failure::Error> {
     let cdg_files = all_cdg();
     let valid = valid_cdg_mp3_paths(cdg_files);
 
-    let db_file = DB_FILE.to_path_buf();
+    let mut db_file = CONFIG.data_path.to_path_buf();
+    db_file.push("db.yaml");
     let mut db: FileDatabase<HashMap<u64, Kfile>, Yaml>;
 
     if db_file.exists() {
