@@ -175,14 +175,15 @@ pub fn startup() -> Result<Collection, failure::Error> {
     db_file.push("db.yaml");
     let mut db: FileDatabase<HashMap<u64, Kfile>, Yaml>;
 
-    if db_file.exists() {
-        db = FileDatabase::<HashMap<u64, Kfile>, Yaml>::from_path(db_file, HashMap::new())?;
-        db.load()?;
-    } else {
-        db = FileDatabase::<HashMap<u64, Kfile>, Yaml>::from_path(db_file, HashMap::new())?;
-        db.save()?;
-        db.load()?;
+    let mut exists = true;
+    if !db_file.exists() {
+        exists = false;
     }
+    db = FileDatabase::<HashMap<u64, Kfile>, Yaml>::from_path(db_file, HashMap::new())?;
+    if !exists {
+        db.save()?;
+    }
+    db.load()?;
 
     let mut existing_keys = Vec::new();
     db.read(|db| {
