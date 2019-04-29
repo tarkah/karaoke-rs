@@ -779,7 +779,7 @@ dependencies = [
 
 [[package]]
 name = "karaoke-rs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cdg 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cdg_renderer 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
