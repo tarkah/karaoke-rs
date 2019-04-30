@@ -1,3 +1,21 @@
+use crossbeam_channel::Sender;
+use karaoke::{
+    channel::{WorkerCommand, WORKER_CHANNEL},
+    collection::{Collection, Kfile, COLLECTION},
+    queue::PLAY_QUEUE,
+};
+use rocket::{
+    catch, catchers, get, post,
+    request::Form,
+    response::{NamedFile, Redirect},
+    routes, uri, FromForm, State,
+};
+use rocket_contrib::{
+    json,
+    json::JsonValue,
+    templates::Template,
+};
+use serde_derive::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -6,22 +24,6 @@ use std::{
     time::Duration,
 };
 
-use serde_derive::{Deserialize, Serialize};
-
-use rocket::{
-    request::Form,
-    response::{NamedFile, Redirect},
-    State,
-};
-use rocket_contrib::{json::JsonValue, templates::Template};
-
-use crossbeam_channel::Sender;
-
-use karaoke::{
-    channel::{WorkerCommand, WORKER_CHANNEL},
-    collection::{Collection, Kfile, COLLECTION},
-    queue::PLAY_QUEUE,
-};
 
 #[derive(FromForm)]
 struct Song {

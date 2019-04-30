@@ -1,10 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread, time,
-};
-
-use crossbeam_channel::{Receiver, Sender};
-
+use crossbeam_channel::{select, Receiver, Sender};
 use karaoke::{
     channel::{
         LiveCommand, PlayerCommand, WorkerCommand, LIVE_CHANNEL, PLAYER_CHANNEL, WORKER_CHANNEL,
@@ -12,6 +6,11 @@ use karaoke::{
     collection::Kfile,
     queue::PLAY_QUEUE,
 };
+use std::{
+    sync::{Arc, Mutex},
+    thread, time,
+};
+
 
 pub fn run() {
     thread::spawn(move || {

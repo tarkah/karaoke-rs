@@ -1,3 +1,9 @@
+use glob::glob;
+use id3::Tag;
+use karaoke::CONFIG;
+use lazy_static::lazy_static;
+use rustbreak::{deser::Yaml, FileDatabase};
+use serde_derive::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     default::Default,
@@ -6,15 +12,6 @@ use std::{
     result::Result,
 };
 
-use glob::glob;
-
-use id3::Tag;
-
-use rustbreak::{deser::Yaml, FileDatabase};
-
-use serde_derive::{Deserialize, Serialize};
-
-use karaoke::CONFIG;
 
 lazy_static! {
     pub static ref COLLECTION: Collection = { startup().unwrap() };

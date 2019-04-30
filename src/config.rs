@@ -9,9 +9,11 @@
 // ```
 //
 use dirs::{config_dir, data_dir};
+use lazy_static::lazy_static;
 use rustbreak::{deser::Yaml, FileDatabase};
 use serde_derive::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
+
 
 type DB = FileDatabase<Config, Yaml>;
 

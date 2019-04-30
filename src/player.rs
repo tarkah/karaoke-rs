@@ -1,3 +1,19 @@
+use crossbeam_channel::{select, Receiver, Sender};
+use image::GenericImage;
+use karaoke::{
+    channel::{LiveCommand, PlayerCommand, LIVE_CHANNEL, PLAYER_CHANNEL},
+    collection::Kfile,
+    queue::PLAY_QUEUE,
+};
+use sfml::{
+    audio::{Sound, SoundBuffer, SoundStatus},
+    graphics::{
+        BlendMode, Color, RectangleShape, RenderStates, RenderTarget, RenderWindow, Texture,
+        Transform, Transformable,
+    },
+    system::{sleep, Time, Vector2f},
+    window::{ContextSettings, Event, Key, Style, VideoMode},
+};
 use std::{
     cell::RefCell,
     f32::consts,
@@ -9,25 +25,6 @@ use std::{
     time::Duration,
 };
 
-use sfml::{
-    audio::{Sound, SoundBuffer, SoundStatus},
-    graphics::{
-        BlendMode, Color, RectangleShape, RenderStates, RenderTarget, RenderWindow, Texture,
-        Transform, Transformable,
-    },
-    system::{sleep, Time, Vector2f},
-    window::{ContextSettings, Event, Key, Style, VideoMode},
-};
-
-use image::GenericImage;
-
-use crossbeam_channel::{Receiver, Sender};
-
-use karaoke::{
-    channel::{LiveCommand, PlayerCommand, LIVE_CHANNEL, PLAYER_CHANNEL},
-    collection::Kfile,
-    queue::PLAY_QUEUE,
-};
 
 pub fn run() {
     thread::spawn(move || {
