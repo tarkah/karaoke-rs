@@ -2,6 +2,7 @@ use glob::glob;
 use id3::Tag;
 use karaoke::CONFIG;
 use lazy_static::lazy_static;
+use rayon::prelude::*;
 use rustbreak::{deser::Yaml, FileDatabase};
 use serde_derive::{Deserialize, Serialize};
 use std::{
@@ -188,16 +189,21 @@ pub fn startup() -> Result<Collection, failure::Error> {
         }
     })?;
 
-    let mut valid_kfiles = Vec::new();
-    for path in valid.iter() {
-        let kfile = Kfile::new(path);
-        valid_kfiles.push(kfile);
-    }
+    let valid_kfiles = valid
+        .par_iter()
+        .map(|path| {
+            let kfile = Kfile::new(path);
+            kfile
+        })
+        .collect::<Vec<Kfile>>();
 
     let missing_valid_keys_to_remove: Vec<u64> = existing_keys
-        .iter()
+        .par_iter()
         .filter_map(|k| {
-            let valid_keys: Vec<u64> = valid_kfiles.iter().map(|x| calculate_hash(&x)).collect();
+            let valid_keys: Vec<u64> = valid_kfiles
+                .par_iter()
+                .map(|x| calculate_hash(&x))
+                .collect();
             if valid_keys.contains(&k) {
                 None
             } else {
@@ -207,7 +213,7 @@ pub fn startup() -> Result<Collection, failure::Error> {
         .collect();
 
     let valid_kfiles_to_add: Vec<Kfile> = valid_kfiles
-        .iter()
+        .par_iter()
         .filter_map(|k| {
             if !existing_keys[..].contains(&calculate_hash(&k)) {
                 Some(k.clone())
@@ -224,8 +230,8 @@ pub fn startup() -> Result<Collection, failure::Error> {
     println!("New songs added: {}", valid_kfiles_to_add.len());
 
     db.write(|db| {
-        for key in missing_valid_keys_to_remove.iter() {
-            db.remove(key);
+        for key in missing_valid_keys_to_remove {
+            db.remove(&key);
         }
         for kfile in valid_kfiles_to_add {
             let key = calculate_hash(&kfile);
