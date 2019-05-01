@@ -3,22 +3,23 @@ use karaoke::{
     channel::{WorkerCommand, WORKER_CHANNEL},
     collection::{Collection, Kfile, COLLECTION},
     queue::PLAY_QUEUE,
+    CONFIG,    
 };
 use rocket::{
     catch, catchers, get, post,
     request::Form,
-    response::{NamedFile, Redirect},
+    response::{content, NamedFile, Redirect},
     routes, uri, FromForm, State,
 };
 use rocket_contrib::{
     json,
     json::JsonValue,
-    templates::Template,
+    templates::tera::Tera,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{Arc, Mutex},
     thread::sleep,
     time::Duration,
@@ -36,41 +37,43 @@ struct Queue {
 }
 
 #[get("/")]
-fn index() -> Template {
+fn index(tera: State<Tera>) -> content::Html<String> {
     let context = HashMap::<String, u64>::new();
-    Template::render("index", &context)
+    let html = tera.render("index.html", &context).unwrap();
+    content::Html(html)
 }
 
 #[get("/songs")]
-fn songs(collection: State<Collection>) -> Template {
+fn songs(tera: State<Tera>, collection: State<Collection>) -> content::Html<String> {
     let context = collection.inner();
-    Template::render("songs", &context)
+    let html = tera.render("songs.html", &context).unwrap();
+    content::Html(html)
 }
 
 #[get("/artists")]
-fn artists(collection: State<Collection>) -> Template {
+fn artists(tera: State<Tera>, collection: State<Collection>) -> content::Html<String> {
     let context = collection.inner();
-
-    Template::render("artists", &context)
+    let html = tera.render("artists.html", &context).unwrap();
+    content::Html(html)
 }
 
 #[get("/artist/<hash>")]
-fn artist(hash: u64, collection: State<Collection>) -> Template {
+fn artist(tera: State<Tera>, hash: u64, collection: State<Collection>) -> content::Html<String> {
     let context = collection.inner();
     let artist = context.by_artist.get(&hash);
-
-    Template::render("artist", &artist)
+    let html = tera.render("artist.html", &artist).unwrap();
+    content::Html(html)
 }
 
 #[get("/queue")]
-fn queue(queue: State<Arc<Mutex<Vec<Kfile>>>>) -> Template {
+fn queue(tera: State<Tera>, queue: State<Arc<Mutex<Vec<Kfile>>>>) -> content::Html<String> {
     let _queue = queue.inner().lock().unwrap();
     let queue = _queue.clone();
     drop(_queue);
 
     let queue = Queue { queue };
-
-    Template::render("queue", &queue)
+    let html = tera.render("queue.html", &queue).unwrap();
+    content::Html(html)
 }
 
 #[post("/api/add", data = "<form>")]
@@ -132,7 +135,9 @@ fn stop(worker_sender: State<Sender<WorkerCommand>>) -> JsonValue {
 
 #[get("/static/<file..>", rank = 1)]
 fn static_files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static").join(file)).ok()
+    let mut static_path = CONFIG.data_path.clone();
+    static_path.push("static");
+    NamedFile::open(static_path.join(file)).ok()
 }
 
 #[catch(404)]
@@ -144,6 +149,10 @@ fn rocket() -> rocket::Rocket {
     let collection = COLLECTION.clone();
     let worker_sender = WORKER_CHANNEL.0.clone();
     let queue = PLAY_QUEUE.clone();
+    
+    let mut template_path = CONFIG.data_path.clone();
+    template_path.push("templates/**/*");
+    let tera = Tera::new(template_path.to_str().unwrap()).unwrap();
 
     rocket::ignite()
         .mount(
@@ -162,11 +171,11 @@ fn rocket() -> rocket::Rocket {
                 static_files
             ],
         )
-        .attach(Template::fairing())
         .register(catchers![not_found])
         .manage(collection)
         .manage(worker_sender)
         .manage(queue)
+        .manage(tera)
 }
 
 pub fn run() {

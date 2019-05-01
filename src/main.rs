@@ -10,6 +10,7 @@ use std::path::PathBuf;
 mod channel;
 mod collection;
 mod config;
+mod embed;
 mod player;
 mod queue;
 mod site;
@@ -21,8 +22,9 @@ lazy_static! {
 }
 
 fn main() {
-    player::run();
-    worker::run();
+    karaoke::embed::unload_files();
+    karaoke::player::run();
+    karaoke::worker::run();
     karaoke::site::run();
 }
 
