@@ -29,7 +29,7 @@ fn main() {
 
 fn get_config() -> Config {
     let matches = App::new("karoake-rs")
-        .version("0.2.0")
+        .version("0.3.0")
         .author("Cory F. <cforsstrom18@gmail.com>")
         .about("A simple, network enabled karaoke player in Rust")
         .arg(
