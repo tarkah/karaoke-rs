@@ -25,7 +25,6 @@ use std::{
     time::Duration,
 };
 
-
 pub fn run() {
     thread::spawn(move || {
         let player = Player::new();

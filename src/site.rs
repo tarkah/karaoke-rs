@@ -3,7 +3,7 @@ use karaoke::{
     channel::{WorkerCommand, WORKER_CHANNEL},
     collection::{Collection, Kfile, COLLECTION},
     queue::PLAY_QUEUE,
-    CONFIG,    
+    CONFIG,
 };
 use rocket::{
     catch, catchers, get, post,
@@ -24,7 +24,6 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-
 
 #[derive(FromForm)]
 struct Song {
@@ -149,7 +148,7 @@ fn rocket() -> rocket::Rocket {
     let collection = COLLECTION.clone();
     let worker_sender = WORKER_CHANNEL.0.clone();
     let queue = PLAY_QUEUE.clone();
-    
+
     let mut template_path = CONFIG.data_path.clone();
     template_path.push("templates/**/*");
     let tera = Tera::new(template_path.to_str().unwrap()).unwrap();

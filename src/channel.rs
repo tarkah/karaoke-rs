@@ -2,7 +2,6 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use karaoke::collection::Kfile;
 use lazy_static::lazy_static;
 
-
 lazy_static! {
     pub static ref WORKER_CHANNEL: (Sender<WorkerCommand>, Receiver<WorkerCommand>) = {
         let (player_send, player_receive) = bounded(1);

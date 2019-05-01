@@ -16,7 +16,6 @@ mod queue;
 mod site;
 mod worker;
 
-
 lazy_static! {
     pub static ref CONFIG: Config = { get_config() };
 }

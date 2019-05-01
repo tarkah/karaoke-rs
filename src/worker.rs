@@ -11,7 +11,6 @@ use std::{
     thread, time,
 };
 
-
 pub fn run() {
     thread::spawn(move || {
         let worker = Worker::new();

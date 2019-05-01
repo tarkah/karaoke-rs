@@ -14,7 +14,6 @@ use rustbreak::{deser::Yaml, FileDatabase};
 use serde_derive::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
 
-
 type DB = FileDatabase<Config, Yaml>;
 
 //Default locations, overriden if supplied in Config file or by Argument
@@ -68,7 +67,6 @@ pub fn load_config(
     song_path: Option<PathBuf>,
     data_path: Option<PathBuf>,
 ) -> Config {
-
     //If config_path supplied (from Arg), use that over default location
     let config_file: PathBuf;
     match config_path {

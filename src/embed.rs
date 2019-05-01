@@ -2,7 +2,6 @@ use karaoke::CONFIG;
 use rust_embed::RustEmbed;
 use std::fs::{write, DirBuilder};
 
-
 #[derive(RustEmbed)]
 #[folder = "embed/templates"]
 struct Templates;

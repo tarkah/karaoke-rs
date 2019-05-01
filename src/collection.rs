@@ -12,7 +12,6 @@ use std::{
     result::Result,
 };
 
-
 lazy_static! {
     pub static ref COLLECTION: Collection = { startup().unwrap() };
 }
