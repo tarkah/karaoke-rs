@@ -113,17 +113,17 @@ impl Kfile {
         let cdg_path = PathBuf::from(path.to_str().unwrap().to_string() + ".cdg");
         let file_name = path.file_name().unwrap().to_str().unwrap();
 
-        let tag = Tag::read_from_path(&mp3_path).unwrap_or(id3::Tag::new());
+        let tag = Tag::read_from_path(&mp3_path).unwrap_or_default();
         let mut artist = tag.artist().unwrap_or("<None>").to_string();
-        let mut song: String;
-
-        if artist == "<None>" {
-            let (parsed_artist, parsed_song) = song_parse(file_name);
-            artist = parsed_artist;
-            song = parsed_song;
-        } else {
-            song = tag.title().unwrap_or(file_name).to_string();
-        }
+        let song = {
+            if artist == "<None>" {
+                let (parsed_artist, parsed_song) = song_parse(file_name);
+                artist = parsed_artist;
+                parsed_song
+            } else {
+                tag.title().unwrap_or(file_name).to_string()
+            }
+        };
 
         let artist_hash = calculate_hash(&artist);
 
@@ -172,10 +172,7 @@ pub fn startup() -> Result<Collection, failure::Error> {
     db_file.push("db.yaml");
     let mut db: FileDatabase<HashMap<u64, Kfile>, Yaml>;
 
-    let mut exists = true;
-    if !db_file.exists() {
-        exists = false;
-    }
+    let exists = db_file.exists();
     db = FileDatabase::<HashMap<u64, Kfile>, Yaml>::from_path(db_file, HashMap::new())?;
     if !exists {
         db.save()?;
@@ -191,10 +188,7 @@ pub fn startup() -> Result<Collection, failure::Error> {
 
     let valid_kfiles = valid
         .par_iter()
-        .map(|path| {
-            let kfile = Kfile::new(path);
-            kfile
-        })
+        .map(|path| Kfile::new(path))
         .collect::<Vec<Kfile>>();
 
     let missing_valid_keys_to_remove: Vec<u64> = existing_keys
@@ -207,7 +201,7 @@ pub fn startup() -> Result<Collection, failure::Error> {
             if valid_keys.contains(&k) {
                 None
             } else {
-                Some(k.clone())
+                Some(*k)
             }
         })
         .collect();

@@ -63,8 +63,8 @@ impl Player {
         let status = Rc::from(RefCell::from(PlayerStatus::Stopped));
         let queue = PLAY_QUEUE.clone();
         Player {
-            window: window,
-            status: status,
+            window,
+            status,
             player_sender: PLAYER_CHANNEL.0.clone(),
             player_receiver: PLAYER_CHANNEL.1.clone(),
             live_sender: LIVE_CHANNEL.0.clone(),
@@ -184,7 +184,7 @@ impl Player {
         song.play();
         loop {
             let track_pos = song.playing_offset().as_milliseconds() as isize;
-            let calc_sector = (track_pos as f32 / 13.33333333).floor() as isize - 27;
+            let calc_sector = (track_pos as f32 / 13.333_333).floor() as isize - 27;
 
             if calc_sector >= 0 {
                 sectors_since = calc_sector - last_sector_no;

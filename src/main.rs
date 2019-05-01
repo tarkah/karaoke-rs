@@ -80,8 +80,7 @@ fn get_config() -> Config {
     };
 
     //Load config file from config_path, override config with supplied Args, if applicable
-    let config = load_config(config_path, song_path, data_path);
-    config
+    load_config(config_path, song_path, data_path)
 }
 
 fn validate_file(path: &str) -> Option<PathBuf> {

@@ -81,10 +81,7 @@ pub fn load_config(
 
     //Load config as DB, if doesn't exist already, create as default
     let mut db: DB;
-    let mut exists = true;
-    if !config_file.to_path_buf().exists() {
-        exists = false;
-    }
+    let exists = config_file.to_path_buf().exists();
     db = FileDatabase::from_path(config_file.to_path_buf(), Config::default())
         .expect("Could not open configuration file");
     //saves as Config::default() if file doesn't exist before loading
@@ -95,17 +92,11 @@ pub fn load_config(
     let mut config = db.get_data(false).unwrap();
 
     //Update config with supplied Args
-    match song_path {
-        Some(path) => {
-            config.song_path = path.to_path_buf();
-        }
-        None => {}
+    if let Some(path) = song_path {
+        config.song_path = path.to_path_buf();
     }
-    match data_path {
-        Some(path) => {
-            config.data_path = path.to_path_buf();
-        }
-        None => {}
+    if let Some(path) = data_path {
+        config.data_path = path.to_path_buf();
     }
     println!("Using song dir: {:?}", config.song_path);
     println!("Using data dir: {:?}", config.data_path);
