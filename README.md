@@ -1,16 +1,23 @@
 # karaoke-rs
 A simple, network enabled karaoke player in Rust. 
 
-Your karaoke collection can be browsed and queued to the player from a self served website. Currently only supports MP3+G (mp3 & corresponding cdg) files. Only tested on linux, but pull requests are welcome to get working on OSX & Windows.
+Your karaoke collection can be browsed and queued to the player from a self served website. Currently only supports MP3+G (mp3 & corresponding cdg) files. Only tested on Linux and Windows, but pull requests are welcome to get working on OSX.
 
 
 ## Setup
+### Linux
 - Install SFML and CSFML bindings to run, required by rust-sfml -- see [link to help setup](https://github.com/jeremyletang/rust-sfml/wiki/Linux)
 - Download latest release binary or compile from source -- `cargo build --release`
 - Run `karaoke-rs --help` to see all arguments
 - Place your song collection at `~/.local/share/karaoke-rs/songs`, or specify location via `--songs path/to/song/directory`
 - Default configuration file is created at `~/.config/karaoke-rs/config.yaml`. This can be copied / changed and specified via `--config path/to/config.yaml`
 
+### Windows
+- Download latest release
+- Double click `karaoke-rs.exe` to run with default configuration. Run from command prompt / powershell `karaoke-rs.exe --help` to see all arguments
+- Place your song collection at `%APPDATA%\karaoke-rs\songs`, or specify location via `--songs C:\path\to\song\directory`
+- Default configuration file is created at `%APPDATA%\karaoke-rs\config.yaml`. This can be copied / changed and specified via `--config C:\path\to\config.yaml`
+- Ensure all paths supplied via argument are absolute from the root of the applicable drive. Relative paths appear to cause program to crash
 
 ## TODO
 - [x] Finish setting up configuration file, allow specifying song directory and data directory (for collection db file)
