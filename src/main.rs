@@ -5,7 +5,7 @@ extern crate self as karaoke;
 use clap::{App, Arg};
 use karaoke::config::{load_config, Config};
 use lazy_static::lazy_static;
-use std::path::PathBuf;
+use std::{fs::metadata, path::PathBuf};
 
 mod channel;
 mod collection;
@@ -17,7 +17,13 @@ mod site;
 mod worker;
 
 lazy_static! {
-    pub static ref CONFIG: Config = { get_config() };
+    pub static ref CONFIG: Config = {
+        let config = get_config();
+        match config {
+            Ok(c) => c,
+            Err(e) => panic!("{}", e),
+        }
+    };
 }
 
 fn main() {
@@ -27,7 +33,7 @@ fn main() {
     karaoke::site::run();
 }
 
-fn get_config() -> Config {
+fn get_config() -> Result<Config, failure::Error> {
     let matches = App::new("karoake-rs")
         .version("0.3.0")
         .author("Cory F. <cforsstrom18@gmail.com>")
@@ -84,27 +90,25 @@ fn get_config() -> Config {
 }
 
 fn validate_file(path: &str) -> Option<PathBuf> {
-    let path_buf = PathBuf::from(path);
-
-    if path_buf.is_file() {
-        Some(path_buf)
-    } else {
-        panic!(
-            "File supplied as argument is not valid: {}",
-            path_buf.display()
-        );
+    let meta = metadata(path).unwrap();
+    let permissions = meta.permissions();
+    if !meta.is_file() {
+        panic!("File supplied as argument is not valid: {}", path)
     }
+    if permissions.readonly() {
+        panic!("Do you have permissions for: {}", path)
+    }
+    Some(PathBuf::from(path))
 }
 
 fn validate_dir(path: &str) -> Option<PathBuf> {
-    let path_buf = PathBuf::from(path);
-
-    if path_buf.is_dir() {
-        Some(path_buf)
-    } else {
-        panic!(
-            "Directory supplied as argument is not valid: {}",
-            path_buf.display()
-        );
+    let meta = metadata(path).unwrap();
+    let permissions = meta.permissions();
+    if !meta.is_dir() {
+        panic!("Dir supplied as argument is not valid: {}", path)
     }
+    if permissions.readonly() {
+        panic!("Do you have permissions for: {}", path)
+    }
+    Some(PathBuf::from(path))
 }
