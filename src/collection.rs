@@ -285,3 +285,73 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
     t.hash(&mut s);
     s.finish()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use karaoke::config::Config;
+    use std::{fs::remove_file, path::PathBuf};
+
+    #[test]
+    fn test_all_cdg() {
+        let song_path = PathBuf::from("tests/test_data/songs");
+        let all_cdg = all_cdg(&song_path);
+        let count = all_cdg.len();
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn test_valid_cdg_mp3_paths() {
+        let song_path = PathBuf::from("tests/test_data/songs");
+        let all_cdg = all_cdg(&song_path);
+        let valid = valid_cdg_mp3_paths(all_cdg);
+        let count = valid.len();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_clean_song_parse() {
+        let parse_string = "ABCD001 - The Testers - Testing 123";
+        let parsed_file = song_parse(parse_string);
+        assert_eq!(parsed_file, Some(("The Testers", "Testing 123")));
+    }
+
+    #[test]
+    fn test_unclean_song_parse() {
+        let parse_string = "ABCD001 The Testers - Testing 123";
+        let parsed_file = song_parse(parse_string);
+        assert_eq!(parsed_file, None);
+    }
+
+    #[test]
+    fn test_kfile_new() {
+        let path = PathBuf::from("ABCD001 - The Testers - Testing 123");
+        let kfile = Kfile::new(&path);
+        let _kfile = Kfile {
+            mp3_path: PathBuf::from("ABCD001 - The Testers - Testing 123.mp3"),
+            cdg_path: PathBuf::from("ABCD001 - The Testers - Testing 123.cdg"),
+            artist: String::from("The Testers"),
+            artist_hash: calculate_hash(&String::from("The Testers")),
+            song: String::from("Testing 123"),
+        };
+        assert_eq!(kfile, _kfile);
+    }
+
+    #[test]
+    fn test_startup() {
+        let song_path = PathBuf::from("tests/test_data/songs");
+        let data_path = PathBuf::from("tests/test_data");
+        let config = Config {
+            song_path: song_path.to_path_buf(),
+            data_path: data_path.to_path_buf(),
+        };
+        let initialize = CollectionDB::initialize(&config.data_path);
+        assert!(initialize.is_ok());
+
+        let collection = initialize.unwrap();
+        let refresh = collection.refresh(&config.song_path);
+        assert!(refresh.is_ok());
+
+        remove_file("tests/test_data/db.yaml").unwrap();
+    }
+}

@@ -111,3 +111,38 @@ pub fn load_config(
 
     Ok(config)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{fs::remove_file, path::PathBuf};
+
+    #[test]
+    fn test_create_default_config() {
+        let config_path = PathBuf::from("tests/test_data/config.yaml");
+        assert!(!config_path.is_file());
+        let config = load_config(Some(config_path.clone()), None, None).unwrap();
+        assert!(config_path.is_file());
+        assert_eq!(config, Config::default());
+
+        remove_file("tests/test_data/config.yaml").unwrap();
+    }
+
+    //Song & Data path already checked to be valid directories before passing to
+    //load_config function, don't need to test it here.
+    #[test]
+    fn test_create_custom_config() {
+        let config_path = PathBuf::from("tests/test_data/config.yaml");
+        let song_path = PathBuf::from("test/test_data/songs");
+        let data_path = PathBuf::from("test/test_data");
+        let config =
+            load_config(Some(config_path.clone()), Some(song_path), Some(data_path)).unwrap();
+        let _config = Config {
+            song_path: PathBuf::from("test/test_data/songs"),
+            data_path: PathBuf::from("test/test_data"),
+        };
+        assert_eq!(config, _config);
+
+        remove_file("tests/test_data/config.yaml").unwrap();
+    }
+}
