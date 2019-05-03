@@ -18,7 +18,7 @@ use std::{
     cell::RefCell,
     f32::consts,
     fs::File,
-    io::{self, BufReader},
+    io::BufReader,
     rc::Rc,
     sync::{Arc, Mutex},
     thread,
@@ -48,17 +48,21 @@ pub struct Player {
     pub live_receiver: Receiver<LiveCommand>,
     pub queue: Arc<Mutex<Vec<Kfile>>>,
     pub background_color: Color,
-    //pub queue: Vec<[Kfile]>,
 }
 
 impl Player {
     pub fn new() -> Self {
-        let win = RenderWindow::new(
+        let mut win = RenderWindow::new(
             VideoMode::desktop_mode(),
             "Karaoke",
             Style::FULLSCREEN,
             &ContextSettings::default(),
         );
+
+        let background_color = Color::BLACK;
+        win.clear(&background_color);
+        win.display();
+
         let window = Rc::from(RefCell::from(win));
         let status = Rc::from(RefCell::from(PlayerStatus::Stopped));
         let queue = PLAY_QUEUE.clone();
@@ -70,7 +74,7 @@ impl Player {
             live_sender: LIVE_CHANNEL.0.clone(),
             live_receiver: LIVE_CHANNEL.1.clone(),
             queue,
-            background_color: Color::BLACK,
+            background_color,
         }
     }
 
@@ -117,6 +121,7 @@ impl Player {
         }
     }
 
+    //
     fn empty_stale_live(&self) {
         select! {
             recv(self.live_receiver) -> _ => { },
@@ -124,119 +129,121 @@ impl Player {
         };
     }
 
-    fn play_song(&self, kfile: Kfile) -> io::Result<()> {
+    fn play_song(&self, kfile: Kfile) -> Result<(), failure::Error> {
+        //Get SFML window to render to
         let mut window = self.window.borrow_mut();
-        let size = window.size();
+        let win_size = window.size();
 
-        let mut music_data = Vec::new();
-        let mut music_sample: i32 = 0;
-        let mut music_channels: usize = 0;
+        //Load mp3 into sound buffer, pass into Sound struct which can manage playback
+        let sound_buffer = get_sound_buffer(&kfile)?;
+        let mut song = Sound::with_buffer(&sound_buffer);
 
-        {
-            let music_file = File::open(kfile.mp3_path).unwrap();
-            let reader = BufReader::new(music_file);
-            let mut decoder = minimp3::Decoder::new(reader);
-            let frame_count = 0;
-            while let Ok(frame) = decoder.next_frame() {
-                music_data.append(&mut frame.data.clone());
-                if frame_count == 0 {
-                    music_sample = frame.sample_rate;
-                    music_channels = frame.channels;
-                }
-            }
-        }
+        //Load cdg, create Subchannel Iterator to cycle through cdg sectors
+        let cdg = File::open(&kfile.cdg_path)?;
+        let mut scsi = cdg::SubchannelStreamIter::new(BufReader::new(cdg));
 
-        let sb =
-            SoundBuffer::from_samples(&music_data[..], music_channels as u32, music_sample as u32)
-                .unwrap();
-        let mut song = Sound::with_buffer(&sb);
+        //Size of cdg render texture, scaled at 1.5x
+        let cdg_x = 300;
+        let cdg_y = 216;
+        let cdg_scale = 1.5;
+        let mut cdg_texture = Texture::new(cdg_x, cdg_y).unwrap();
+        cdg_texture.set_smooth(true);
 
-        let infile = File::open(kfile.cdg_path)?;
-        let mut scsi = cdg::SubchannelStreamIter::new(BufReader::new(infile));
+        //Calculate center, create vector points for center, size and scale of cdg texture
+        let cdg_x_center = win_size.x as f32 * 0.5 - (cdg_x as f32 * cdg_scale) * 0.5;
+        let cdg_y_center = win_size.y as f32 * 0.5 - (cdg_y as f32 * cdg_scale) * 0.5;
+        let cdg_center = Vector2f::new(cdg_x_center, cdg_y_center);
+        let cdg_size = Vector2f::new(cdg_x as f32, cdg_y as f32);
+        let cdg_scale = Vector2f::new(cdg_scale, cdg_scale);
 
-        let frame_x = 300;
-        let frame_y = 216;
-        let scale = 1.5;
-        let mut texture_frame = Texture::new(frame_x, frame_y).unwrap();
-        texture_frame.set_smooth(true);
-
-        let frame_x_center = size.x as f32 * 0.5 - (frame_x as f32 * scale) * 0.5;
-        let frame_y_center = size.y as f32 * 0.5 - (frame_y as f32 * scale) * 0.5;
-        let frame_center = Vector2f::new(frame_x_center, frame_y_center);
-        let frame_size = Vector2f::new(frame_x as f32, frame_y as f32);
-        let frame_scale = Vector2f::new(scale, scale);
-
+        //Background texture is just 1 pixel color, repeated
         let background_x = 1;
         let background_y = 1;
+        let mut background_texture = Texture::new(background_x, background_y).unwrap();
+        background_texture.set_repeated(true);
+        let background_size = Vector2f::new(win_size.x as f32, win_size.y as f32);
 
-        let mut texture_background = Texture::new(background_x, background_y).unwrap();
-        texture_background.set_repeated(true);
-        let background_size = Vector2f::new(size.x as f32, size.y as f32);
-
+        //Counter and frequency for rainbow effect
         let mut i: f32 = 0.0;
         let size: f32 = 4096.0;
 
+        //Values to help keep rendered frames in sync with music
         let mut last_sector_no: isize = 0;
         let mut sectors_since: isize = 0;
-        let mut interp = cdg_renderer::CdgInterpreter::new();
-        let mut res_image = image::RgbaImage::new(300, 216);
 
+        //Create CdgInterpreter, which will consume sector commands and produce
+        //finished frames which can be copied into RgbaImage. Image data can then
+        //be fed into cdg_texture
+        let mut cdg_interp = cdg_renderer::CdgInterpreter::new();
+        let mut cdg_image = image::RgbaImage::new(300, 216);
+
+        //Play it!
         song.play();
+
+        //Loop will get current song position, calculate how many "cdg sectors"
+        //have elasped in total (1 sector = 1/75th of a second), and subtract
+        //last_sector_no to determine how many sectors worth of cdg commands need
+        //to be iterated and processed by the CdgInterpreter. RGBA data can then
+        //be copied out of the interpreter and updated to the cdg_texture.
+        //
+        //Every time a new frame is rendered, the background texture color will
+        //update based on a sine wave function to smoothly cycle through the
+        //rainbow.
+        //
+        //Current song can be stopped with either ESC key or receiving a Stop
+        //command.
         loop {
             let track_pos = song.playing_offset().as_milliseconds() as isize;
+
+            //Offset rendering lyrics by 27 sectors, this syncs lyrics to music
+            //almost perfectly
             let calc_sector = (track_pos as f32 / 13.333_333).floor() as isize - 27;
 
             if calc_sector >= 0 {
                 sectors_since = calc_sector - last_sector_no;
-                last_sector_no = calc_sector;
 
+                //Iterate each sector, process all commands in CdgInterpreter
                 for _ in 0..sectors_since {
                     let sector = scsi.next().unwrap();
 
                     for cmd in sector {
-                        interp.handle_cmd(cmd);
+                        cdg_interp.handle_cmd(cmd);
                     }
                 }
+
+                last_sector_no = calc_sector;
             }
 
+            //Don't start rendering until offset passes 0
             if sectors_since > 0 {
-                i = if (i + 1.0) % size == 0.0 {
-                    0.0
-                } else {
-                    i + 1.0
-                };
-                let red = (((consts::PI / size * 2.0 * i + 0.0 * consts::PI / 3.0).sin() * 127.0)
-                    .floor()
-                    + 128.0) as u8;
-                let green = (((consts::PI / size * 2.0 * i + 4.0 * consts::PI / 3.0).sin() * 127.0)
-                    .floor()
-                    + 128.0) as u8;
-                let blue = (((consts::PI / size * 2.0 * i + 8.0 * consts::PI / 3.0).sin() * 127.0)
-                    .floor()
-                    + 128.0) as u8;
-                let background_data = [red, green, blue, 255];
 
-                texture_background.update_from_pixels(&background_data, 1, 1, 0, 0);
-                let mut background_rect = RectangleShape::with_texture(&texture_background);
-
+                //Get background data from rainbow cycle, update texture, draw
+                //to window
+                let background_data = rainbow_cycle(&mut i, size);
+                background_texture.update_from_pixels(&background_data, 1, 1, 0, 0);
+                let mut background_rect = RectangleShape::with_texture(&background_texture);
                 background_rect.set_size(background_size);
                 window.draw(&background_rect);
 
-                res_image.copy_from(&interp, 0, 0);
-                let image = res_image.clone();
-
-                let data = image.into_raw();
-                texture_frame.update_from_pixels(&data[..], 300, 216, 0, 0);
-                let mut frame_rect = RectangleShape::with_texture(&texture_frame);
-                frame_rect.set_size(frame_size);
-                frame_rect.set_scale(frame_scale);
-                frame_rect.set_position(frame_center);
+                //Get updated cdg frame from interpreter, clone into RGBA image,
+                //get data from image, update texture, draw to window
+                cdg_image.copy_from(&cdg_interp, 0, 0);
+                let _image = cdg_image.clone();
+                let data = _image.into_raw();
+                cdg_texture.update_from_pixels(&data[..], 300, 216, 0, 0);
+                let mut cdg_rect = RectangleShape::with_texture(&cdg_texture);
+                cdg_rect.set_size(cdg_size);
+                cdg_rect.set_scale(cdg_scale);
+                cdg_rect.set_position(cdg_center);
                 let render_state =
                     RenderStates::new(BlendMode::NONE, Transform::default(), None, None);
-                window.draw_with_renderstates(&frame_rect, render_state);
+                window.draw_with_renderstates(&cdg_rect, render_state);
 
+                //Render updated background and cdg textures
                 window.display();
             }
+
+            //Quit song if ESC key pressed
             while let Some(event) = window.poll_event() {
                 match event {
                     Event::Closed
@@ -249,10 +256,8 @@ impl Player {
                     _ => {}
                 }
             }
-            if song.status() == SoundStatus::Stopped {
-                *self.status.borrow_mut() = PlayerStatus::Stopped;
-                return Ok(());
-            }
+
+            //Check to see if Stop command is received for early exit
             select! {
                 recv(self.live_receiver) -> cmd => {
                     if cmd.unwrap() == LiveCommand::Stop {
@@ -262,7 +267,58 @@ impl Player {
                 },
                 default => {},
             }
+
+            //If song naturally ends, set PlayerStatus to stopped and return
+            if song.status() == SoundStatus::Stopped {
+                *self.status.borrow_mut() = PlayerStatus::Stopped;
+                return Ok(());
+            }
+
+            //Save some precious CPU time
             sleep(Time::milliseconds(40));
         }
     }
+}
+
+//Open mp3 file, load into memory, decode and return resulting SoundBuffer
+fn get_sound_buffer(kfile: &Kfile) -> Result<SoundBuffer, failure::Error> {
+    let mut music_data = Vec::new();
+    let mut music_sample: i32 = 0;
+    let mut music_channels: usize = 0;
+
+    {
+        let music_file = File::open(&kfile.mp3_path)?;
+        let reader = BufReader::new(music_file);
+        let mut decoder = minimp3::Decoder::new(reader);
+        let frame_count = 0;
+        while let Ok(frame) = decoder.next_frame() {
+            music_data.append(&mut frame.data.clone());
+            if frame_count == 0 {
+                music_sample = frame.sample_rate;
+                music_channels = frame.channels;
+            }
+        }
+    }
+
+    Ok(
+        SoundBuffer::from_samples(&music_data[..], music_channels as u32, music_sample as u32)
+            .unwrap(),
+    )
+}
+
+//Sine wave formula for rainbow cycling background color
+fn rainbow_cycle(i: &mut f32, size: f32) -> [u8; 4] {
+    *i = if (*i + 1.0) % size == 0.0 {
+        0.0
+    } else {
+        *i + 1.0
+    };
+    let red = (((consts::PI / size * 2.0 * *i + 0.0 * consts::PI / 3.0).sin() * 127.0).floor()
+        + 128.0) as u8;
+    let green = (((consts::PI / size * 2.0 * *i + 4.0 * consts::PI / 3.0).sin() * 127.0).floor()
+        + 128.0) as u8;
+    let blue = (((consts::PI / size * 2.0 * *i + 8.0 * consts::PI / 3.0).sin() * 127.0).floor()
+        + 128.0) as u8;
+
+    [red, green, blue, 255]
 }
