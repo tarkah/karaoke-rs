@@ -225,15 +225,22 @@ impl Kfile {
         let file_name = path.file_name().unwrap().to_str().unwrap();
 
         let tag = Tag::read_from_path(&mp3_path).unwrap_or_default();
-        let mut artist = tag.artist().unwrap_or("<None>").to_string();
-        let song = {
-            if artist == "<None>" {
-                let (parsed_artist, parsed_song) = song_parse(file_name);
-                artist = parsed_artist;
-                parsed_song
-            } else {
-                tag.title().unwrap_or(file_name).to_string()
-            }
+        let tag_artist = tag.artist();
+        let tag_song = tag.title();
+
+        let parsed_file = song_parse(file_name);
+        let (parsed_artist, parsed_song) = match parsed_file {
+            Some(tuple) => (tuple.0, tuple.1),
+            None => ("<None>", file_name),
+        };
+
+        let artist = match tag_artist {
+            Some(s) => s,
+            None => parsed_artist,
+        };
+        let song = match tag_song {
+            Some(s) => s,
+            None => parsed_song,
         };
 
         let artist_hash = calculate_hash(&artist);
@@ -241,9 +248,9 @@ impl Kfile {
         Kfile {
             mp3_path,
             cdg_path,
-            artist,
+            artist: artist.to_string(),
             artist_hash,
-            song,
+            song: song.to_string(),
         }
     }
 }
@@ -260,13 +267,17 @@ impl Default for Kfile {
     }
 }
 
-fn song_parse(file_name: &str) -> (String, String) {
+//Parses artist & song from files with naming convention: "album - artist - song"
+fn song_parse(file_name: &str) -> Option<(&str, &str)> {
     let mut split: Vec<&str> = file_name.split(" - ").collect();
 
-    let song = split.pop().unwrap_or(file_name);
-    let artist = split.pop().unwrap_or("<None>");
-
-    (artist.to_string(), song.to_string())
+    if split.len() == 3 {
+        let song = split.pop().unwrap();
+        let artist = split.pop().unwrap();
+        Some((artist, song))
+    } else {
+        None
+    }
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
