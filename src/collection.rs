@@ -17,9 +17,120 @@ lazy_static! {
     pub static ref COLLECTION: Collection = { startup().unwrap() };
 }
 
-fn all_cdg() -> Vec<PathBuf> {
+pub type CollectionDB = FileDatabase<HashMap<u64, Kfile>, Yaml>;
+
+pub trait Custom {
+    fn initialize(path: &PathBuf) -> Result<Box<Self>, failure::Error>;
+    fn refresh(&self, path: &PathBuf) -> Result<(), failure::Error>;
+    fn get_collection(&self) -> Result<Collection, failure::Error>;
+}
+
+impl Custom for CollectionDB {
+    //If file doesn't exist, create default. Load db from file.
+    fn initialize(path: &PathBuf) -> Result<Box<CollectionDB>, failure::Error> {
+        let mut db: CollectionDB;
+
+        let mut db_path = path.to_path_buf();
+        db_path.push("db.yaml");
+
+        let exists = db_path.exists();
+        db = CollectionDB::from_path(db_path, HashMap::new())?;
+        if !exists {
+            db.save()?;
+        }
+        db.load()?;
+
+        Ok(Box::new(db))
+    }
+
+    fn refresh(&self, song_path: &PathBuf) -> Result<(), failure::Error> {
+        let cdg_files = all_cdg(&song_path);
+        let valid = valid_cdg_mp3_paths(cdg_files);
+
+        let mut existing_keys = Vec::new();
+        self.read(|db| {
+            for key in db.keys() {
+                existing_keys.push(key.clone());
+            }
+        })?;
+
+        let valid_kfiles = valid
+            .par_iter()
+            .map(|path| Kfile::new(path))
+            .collect::<Vec<Kfile>>();
+
+        let missing_valid_keys_to_remove: Vec<u64> = existing_keys
+            .par_iter()
+            .filter_map(|k| {
+                let valid_keys: Vec<u64> = valid_kfiles
+                    .par_iter()
+                    .map(|x| calculate_hash(&x))
+                    .collect();
+                if valid_keys.contains(&k) {
+                    None
+                } else {
+                    Some(*k)
+                }
+            })
+            .collect();
+
+        let valid_kfiles_to_add: Vec<Kfile> = valid_kfiles
+            .par_iter()
+            .filter_map(|k| {
+                if !existing_keys[..].contains(&calculate_hash(&k)) {
+                    Some(k.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        println!(
+            "Invalid songs removed: {}",
+            missing_valid_keys_to_remove.len()
+        );
+        println!("New songs added: {}", valid_kfiles_to_add.len());
+
+        self.write(|db| {
+            for key in missing_valid_keys_to_remove {
+                db.remove(&key);
+            }
+            for kfile in valid_kfiles_to_add {
+                let key = calculate_hash(&kfile);
+                db.insert(key, kfile);
+            }
+        })?;
+
+        self.save()?;
+
+        Ok(())
+    }
+
+    fn get_collection(&self) -> Result<Collection, failure::Error> {
+        let mut _collection = Vec::new();
+        self.read(|db| {
+            for value in db.values() {
+                _collection.push(value.clone());
+            }
+        })?;
+
+        let collection = Collection::new(_collection);
+        println!("# Songs: {}", collection.by_song.len());
+        println!("# Artists: {}", collection.by_artist.len());
+
+        Ok(collection)
+    }
+}
+
+fn startup() -> Result<Collection, failure::Error> {
+    let collection_db = CollectionDB::initialize(&CONFIG.data_path)?;
+    collection_db.refresh(&CONFIG.song_path)?;
+    collection_db.get_collection()
+}
+
+fn all_cdg(song_path: &PathBuf) -> Vec<PathBuf> {
     let mut vec = Vec::new();
-    let mut glob_path = CONFIG.song_path.to_path_buf();
+    let mut glob_path = song_path.to_path_buf();
     glob_path.push("**/*.cdg");
     let glob_str = glob_path.display().to_string();
     for file in glob(&glob_str).unwrap().filter_map(Result::ok) {
@@ -162,90 +273,4 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
-}
-
-pub fn startup() -> Result<Collection, failure::Error> {
-    let cdg_files = all_cdg();
-    let valid = valid_cdg_mp3_paths(cdg_files);
-
-    let mut db_file = CONFIG.data_path.to_path_buf();
-    db_file.push("db.yaml");
-    let mut db: FileDatabase<HashMap<u64, Kfile>, Yaml>;
-
-    let exists = db_file.exists();
-    db = FileDatabase::<HashMap<u64, Kfile>, Yaml>::from_path(db_file, HashMap::new())?;
-    if !exists {
-        db.save()?;
-    }
-    db.load()?;
-
-    let mut existing_keys = Vec::new();
-    db.read(|db| {
-        for key in db.keys() {
-            existing_keys.push(key.clone());
-        }
-    })?;
-
-    let valid_kfiles = valid
-        .par_iter()
-        .map(|path| Kfile::new(path))
-        .collect::<Vec<Kfile>>();
-
-    let missing_valid_keys_to_remove: Vec<u64> = existing_keys
-        .par_iter()
-        .filter_map(|k| {
-            let valid_keys: Vec<u64> = valid_kfiles
-                .par_iter()
-                .map(|x| calculate_hash(&x))
-                .collect();
-            if valid_keys.contains(&k) {
-                None
-            } else {
-                Some(*k)
-            }
-        })
-        .collect();
-
-    let valid_kfiles_to_add: Vec<Kfile> = valid_kfiles
-        .par_iter()
-        .filter_map(|k| {
-            if !existing_keys[..].contains(&calculate_hash(&k)) {
-                Some(k.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    println!(
-        "Invalid songs removed: {}",
-        missing_valid_keys_to_remove.len()
-    );
-    println!("New songs added: {}", valid_kfiles_to_add.len());
-
-    db.write(|db| {
-        for key in missing_valid_keys_to_remove {
-            db.remove(&key);
-        }
-        for kfile in valid_kfiles_to_add {
-            let key = calculate_hash(&kfile);
-            db.insert(key, kfile);
-        }
-    })?;
-
-    db.save()?;
-
-    let mut _collection = Vec::new();
-    db.read(|db| {
-        for value in db.values() {
-            _collection.push(value.clone());
-        }
-    })?;
-
-    let collection = Collection::new(_collection);
-
-    println!("# Songs: {}", collection.by_song.len());
-    println!("# Artists: {}", collection.by_artist.len());
-
-    Ok(collection)
 }

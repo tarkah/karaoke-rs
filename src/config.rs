@@ -14,7 +14,7 @@ use rustbreak::{deser::Yaml, FileDatabase};
 use serde_derive::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
 
-type DB = FileDatabase<Config, Yaml>;
+type ConfigDB = FileDatabase<Config, Yaml>;
 
 //Default locations, overriden if supplied in Config file or by Argument
 lazy_static! {
@@ -46,7 +46,7 @@ lazy_static! {
     };
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
     pub song_path: PathBuf,
     pub data_path: PathBuf,
@@ -61,12 +61,27 @@ impl Default for Config {
     }
 }
 
+//If file doesn't exist, create default. Load db from file.
+fn initialize_db(db_path: PathBuf) -> Result<ConfigDB, failure::Error> {
+    let mut db: ConfigDB;
+
+    let exists = db_path.to_path_buf().exists();
+    db = FileDatabase::from_path(db_path.to_path_buf(), Config::default())?;
+    if !exists {
+        db.save()?;
+    }
+    db.load()?;
+
+    Ok(db)
+}
+
 //Loads a configuration file from default / supplied path, then overrides contents with any supplied args
 pub fn load_config(
     config_path: Option<PathBuf>,
     song_path: Option<PathBuf>,
     data_path: Option<PathBuf>,
-) -> Config {
+) -> Result<Config, failure::Error> {
+
     //If config_path supplied (from Arg), use that over default location
     let config_file: PathBuf;
     match config_path {
@@ -79,17 +94,10 @@ pub fn load_config(
     }
     println!("Using config file: {:?}", config_file.display());
 
-    //Load config as DB, if doesn't exist already, create as default
-    let mut db: DB;
-    let exists = config_file.to_path_buf().exists();
-    db = FileDatabase::from_path(config_file.to_path_buf(), Config::default())
-        .expect("Could not open configuration file");
-    //saves as Config::default() if file doesn't exist before loading
-    if !exists {
-        db.save().expect("Could not save configuration file");
-    }
-    db.load().expect("Configuration file not valid, recreate");
-    let mut config = db.get_data(false).unwrap();
+    let db = initialize_db(config_file.to_path_buf())?;
+
+    //get Config struct from db
+    let mut config = db.get_data(false)?;
 
     //Update config with supplied Args
     if let Some(path) = song_path {
@@ -101,5 +109,5 @@ pub fn load_config(
     println!("Using song dir: {:?}", config.song_path);
     println!("Using data dir: {:?}", config.data_path);
 
-    config
+    Ok(config)
 }
