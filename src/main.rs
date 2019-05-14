@@ -1,4 +1,3 @@
-#![feature(proc_macro_hygiene, decl_macro)]
 
 extern crate self as karaoke;
 
@@ -26,11 +25,12 @@ lazy_static! {
     };
 }
 
-fn main() {
+fn main() -> Result<(), failure::Error> {
     karaoke::embed::unload_files();
     karaoke::player::run();
     karaoke::worker::run();
-    karaoke::site::run();
+    karaoke::site::run()?;
+    Ok(())
 }
 
 fn get_config() -> Result<Config, failure::Error> {
