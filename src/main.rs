@@ -39,7 +39,7 @@ fn main() -> Result<(), failure::Error> {
 
 fn get_config() -> Result<Config, failure::Error> {
     let matches = App::new("karoake-rs")
-        .version("0.3.0")
+        .version("0.4.0")
         .author("Cory F. <cforsstrom18@gmail.com>")
         .about("A simple, network enabled karaoke player in Rust")
         .arg(
@@ -67,7 +67,7 @@ fn get_config() -> Result<Config, failure::Error> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("no-collection-update")              
+            Arg::with_name("no-collection-update")
                 .long("no-collection-update")
                 .help("Disable collection update on startup"),
         )

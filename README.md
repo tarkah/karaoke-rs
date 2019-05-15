@@ -23,8 +23,6 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 - [x] Finish setting up configuration file, allow specifying song directory and data directory (for collection db file)
 - [x] Allow passing config file location as argument
 - [x] Bundle website template / static files into build binary, unload them to data path on run, update Rocket to load templates / static files from that path
-- [ ] Change collection refresh from on startup to triggered from website
-- [ ] Add some stats to the collection database, such as number of times played, last date listened to, date added, etc.
 - [ ] Setup proper logging and error handling
 
 
