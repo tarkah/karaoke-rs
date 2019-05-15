@@ -91,7 +91,7 @@ fn add(
     worker_sender: web::Data<Sender<WorkerCommand>>,
 ) -> HttpResponse {
     let hash = form.hash;
-    let kfile = collection.by_song.get(&hash).unwrap().clone();
+    let kfile = collection.by_song[&hash].clone();
     let cmd = WorkerCommand::AddQueue { kfile };
     worker_sender.send(cmd).unwrap();
     HttpResponse::Ok().json(JsonStatus { status: "ok" })
@@ -103,7 +103,7 @@ fn playnow(
     worker_sender: web::Data<Sender<WorkerCommand>>,
 ) -> HttpResponse {
     let hash = form.hash;
-    let kfile = collection.by_song.get(&hash).unwrap().clone();
+    let kfile = collection.by_song[&hash].clone();
     let cmd = WorkerCommand::PlayNow { kfile };
     worker_sender.send(cmd).unwrap();
     HttpResponse::Ok().json(JsonStatus { status: "ok" })
