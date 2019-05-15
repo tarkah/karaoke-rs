@@ -1,0 +1,79 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+resources:
+  containers:
+  - container: u1904
+    image: 'ubuntu:19.04'
+    options: "--name ci-container -v /usr/bin/docker:/tmp/docker:ro"
+
+jobs:
+  - job: 'Clippy'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    strategy:
+      matrix:
+        ubuntu1904:
+          containerResource: u1904
+
+    container: $[ variables['containerResource'] ]
+
+    steps:
+      - script: |
+          /tmp/docker exec -t -u 0 ci-container \
+          sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
+        displayName: Set up sudo
+      - script: |
+          sudo apt install -y curl build-essential
+        displayName: Install curl & build-essential
+      - script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+        displayName: Install rust
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          rustup component add clippy
+        displayName: Install Clippy
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          cargo clippy --all
+        displayName: Run clippy
+
+  - job: 'Test'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    strategy:
+      matrix:
+        ubuntu1904:
+          containerResource: u1904
+
+    container: $[ variables['containerResource'] ]
+
+    steps:
+      - script: |
+          /tmp/docker exec -t -u 0 ci-container \
+          sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
+        displayName: Set up sudo
+      - script: |
+          sudo apt install -y curl build-essential
+        displayName: Install curl
+      - script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+        displayName: Install rust
+      - script: |
+          sudo apt install -y libcsfml-dev libsfml-dev
+        displayName: Install SFML & CSFML bindings
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          cargo build --all
+        displayName: Cargo build
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          RUST_TEST_THREADS=1 cargo test --all
+        displayName: Cargo test
