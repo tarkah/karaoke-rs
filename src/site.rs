@@ -140,11 +140,21 @@ fn p404(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
         .body(html))
 }
 
+fn get_server_port() -> u16 {
+    std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8080)
+}
+
 pub fn run() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init();
 
-    HttpServer::new(|| {
+    let port = get_server_port();
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
+
+    let server = HttpServer::new(|| {
         let collection = COLLECTION.clone();
         let worker_sender = WORKER_CHANNEL.0.clone();
         let play_queue = PLAY_QUEUE.clone();
@@ -185,6 +195,9 @@ pub fn run() -> std::io::Result<()> {
                     ),
             )
     })
-    .bind("0.0.0.0:8000")?
-    .run()
+    .bind(addr)?;
+
+    println!("Actix has launched from http://0.0.0.0:{}", port);
+
+    server.run()
 }
