@@ -26,11 +26,15 @@ jobs:
 
     steps:
       - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
         displayName: Install rust
-      - script: PATH=$HOME/.cargo/bin:$PATH rustup component add clippy
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          rustup component add clippy
         displayName: Install Clippy
-      - script: PATH=$HOME/.cargo/bin:$PATH cargo clippy --all
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          cargo clippy --all
         displayName: Run clippy
 
   - job: 'Test'
@@ -50,15 +54,17 @@ jobs:
           sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
         displayName: Set up sudo
       - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
         displayName: Install rust
       - script: |
           sudo apt install -y libcsfml-dev libsfml-dev
         displayName: Install SFML & CSFML bindings
-      - script: PATH=$HOME/.cargo/bin:$PATH cargo build --all
+      - script: |
+          export PATH=$PATH:$HOME/.cargo/bin
+          cargo build --all
         displayName: Cargo build
       - script: |
-          PATH=$HOME/.cargo/bin:$PATH RUST_TEST_THREADS=1 \
-          cargo test --all
+          export PATH=$PATH:$HOME/.cargo/bin
+          RUST_TEST_THREADS=1 cargo test --all
         displayName: Cargo test
 
