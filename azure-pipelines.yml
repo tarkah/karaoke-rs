@@ -15,6 +15,7 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+          sudo source $HOME/.profile
         displayName: Install rust
       - script: rustup component add clippy
         displayName: Install Clippy
@@ -29,9 +30,10 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+          source $HOME/.profile
         displayName: Install rust
       - script: |
-          apt install -y libcsfml-dev libsfml-dev
+          sudo apt install -y libcsfml-dev libsfml-dev
         displayName: Install SFML & CSFML bindings
       - script: cargo build --all
         displayName: Cargo build
