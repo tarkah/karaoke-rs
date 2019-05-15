@@ -62,6 +62,11 @@ fn get_config() -> Result<Config, failure::Error> {
                 .help("Sets a custom data directory")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("no-collection-update")              
+                .long("no-collection-update")
+                .help("Disable collection update on startup"),
+        )
         .get_matches();
 
     let config_path: Option<PathBuf>;
@@ -84,9 +89,12 @@ fn get_config() -> Result<Config, failure::Error> {
         Some(path) => validate_dir(path),
         None => None,
     };
+    let no_collection_update = if matches.is_present("no-collection-update") {
+        Some(true)
+    } else { None };
 
     //Load config file from config_path, override config with supplied Args, if applicable
-    load_config(config_path, song_path, data_path)
+    load_config(config_path, song_path, data_path, no_collection_update)
 }
 
 fn validate_file(path: &str) -> Option<PathBuf> {

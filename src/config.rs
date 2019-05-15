@@ -50,6 +50,7 @@ lazy_static! {
 pub struct Config {
     pub song_path: PathBuf,
     pub data_path: PathBuf,
+    pub no_collection_update: bool,
 }
 
 impl Default for Config {
@@ -57,6 +58,7 @@ impl Default for Config {
         Config {
             song_path: SONG_DIR.to_path_buf(),
             data_path: DATA_DIR.to_path_buf(),
+            no_collection_update: false,
         }
     }
 }
@@ -70,7 +72,13 @@ fn initialize_db(db_path: PathBuf) -> Result<ConfigDB, failure::Error> {
     if !exists {
         db.save()?;
     }
-    db.load()?;
+    match db.load() {
+        Ok(_) => {},
+        Err(_) => {
+            println!("Config structure invalid, overwritting with default. Probably due to a change in structure compared to a prior release.");
+            db.save()?;
+        }
+    };
 
     Ok(db)
 }
@@ -80,6 +88,7 @@ pub fn load_config(
     config_path: Option<PathBuf>,
     song_path: Option<PathBuf>,
     data_path: Option<PathBuf>,
+    no_collection_update: Option<bool>,
 ) -> Result<Config, failure::Error> {
 
     //If config_path supplied (from Arg), use that over default location
@@ -106,8 +115,12 @@ pub fn load_config(
     if let Some(path) = data_path {
         config.data_path = path.to_path_buf();
     }
+    if let Some(bool) = no_collection_update {
+        config.no_collection_update = bool;
+    }
     println!("Using song dir: {:?}", config.song_path);
     println!("Using data dir: {:?}", config.data_path);
+    println!("Collection to be refreshed: {:?}", !config.no_collection_update);
 
     Ok(config)
 }
@@ -121,7 +134,7 @@ mod tests {
     fn test_create_default_config() {
         let config_path = PathBuf::from("tests/test_data/config.yaml");
         assert!(!config_path.is_file());
-        let config = load_config(Some(config_path.clone()), None, None).unwrap();
+        let config = load_config(Some(config_path.clone()), None, None, None).unwrap();
         assert!(config_path.is_file());
         assert_eq!(config, Config::default());
 
@@ -136,10 +149,11 @@ mod tests {
         let song_path = PathBuf::from("test/test_data/songs");
         let data_path = PathBuf::from("test/test_data");
         let config =
-            load_config(Some(config_path.clone()), Some(song_path), Some(data_path)).unwrap();
+            load_config(Some(config_path.clone()), Some(song_path), Some(data_path), Some(true)).unwrap();
         let _config = Config {
             song_path: PathBuf::from("test/test_data/songs"),
             data_path: PathBuf::from("test/test_data"),
+            no_collection_update: true,
         };
         assert_eq!(config, _config);
 

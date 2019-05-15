@@ -14,7 +14,13 @@ use std::{
 };
 
 lazy_static! {
-    pub static ref COLLECTION: Collection = { startup().unwrap() };
+    pub static ref COLLECTION: Collection = {
+        let collection = startup(CONFIG.no_collection_update);
+        match collection {
+            Ok(c) => c,
+            Err(e) => panic!("{}", e),
+        }
+    };
 }
 
 pub type CollectionDB = FileDatabase<HashMap<u64, Kfile>, Yaml>;
@@ -122,9 +128,11 @@ impl Custom for CollectionDB {
     }
 }
 
-fn startup() -> Result<Collection, failure::Error> {
+pub fn startup(no_collection_update: bool) -> Result<Collection, failure::Error> {
     let collection_db = CollectionDB::initialize(&CONFIG.data_path)?;
-    collection_db.refresh(&CONFIG.song_path)?;
+    if !no_collection_update {
+        collection_db.refresh(&CONFIG.song_path)?;
+    }
     collection_db.get_collection()
 }
 
@@ -344,6 +352,7 @@ mod tests {
         let config = Config {
             song_path: song_path.to_path_buf(),
             data_path: data_path.to_path_buf(),
+            no_collection_update: false,
         };
         let initialize = CollectionDB::initialize(&config.data_path);
         assert!(initialize.is_ok());
