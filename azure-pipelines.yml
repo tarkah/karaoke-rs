@@ -28,9 +28,9 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
         displayName: Install rust
-      - script: source $HOME/.profile && rustup component add clippy
+      - script: PATH=$HOME/.cargo/bin:$PATH rustup component add clippy
         displayName: Install Clippy
-      - script: source $HOME/.profile && cargo clippy --all
+      - script: PATH=$HOME/.cargo/bin:$PATH cargo clippy --all
         displayName: Run clippy
 
   - job: 'Test'
@@ -47,7 +47,7 @@ jobs:
     steps:
       - script: |
           /tmp/docker exec -t -u 0 ci-container \
-          sh -c "apt-get update && apt-get -y install sudo"
+          sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
         displayName: Set up sudo
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -55,8 +55,10 @@ jobs:
       - script: |
           sudo apt install -y libcsfml-dev libsfml-dev
         displayName: Install SFML & CSFML bindings
-      - script: cargo build --all
+      - script: PATH=$HOME/.cargo/bin:$PATH cargo build --all
         displayName: Cargo build
-      - script: RUST_TEST_THREADS=1 cargo test --all
+      - script: |
+          PATH=$HOME/.cargo/bin:$PATH RUST_TEST_THREADS=1 \
+          cargo test --all
         displayName: Cargo test
 
