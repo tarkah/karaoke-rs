@@ -26,6 +26,8 @@ lazy_static! {
 }
 
 fn main() -> Result<(), failure::Error> {
+    lazy_static::initialize(&CONFIG);
+    lazy_static::initialize(&COLLECTION);
     karaoke::embed::unload_files();
     karaoke::player::run();
     karaoke::worker::run();
