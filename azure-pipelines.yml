@@ -6,16 +6,29 @@
 trigger:
 - master
 
+resources:
+  containers:
+  - container: u1904
+    image: 'ubuntu:19.04'
+    options: "--name ci-container"
+
 jobs:
   - job: 'Clippy'
     pool:
       vmImage: 'ubuntu-latest'
-    container: 'ubuntu:19.04'
+    
+    strategy:
+      matrix:
+        ubuntu1904:
+          containerResource: u1904
+
+    container: $[ variables['containerResource'] ]
+
     steps:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-          sudo source $HOME/.profile
+          source $HOME/.profile
         displayName: Install rust
       - script: rustup component add clippy
         displayName: Install Clippy
@@ -25,8 +38,19 @@ jobs:
   - job: 'Test'
     pool:
       vmImage: 'ubuntu-latest'
-    container: 'ubuntu:19.04'
+
+    strategy:
+      matrix:
+        ubuntu1904:
+          containerResource: u1904
+
+    container: $[ variables['containerResource'] ]
+
     steps:
+      - script: |
+          /tmp/docker exec -t -u 0 ci-container \
+          sh -c "apt-get update && apt-get -y install sudo"
+        displayName: Set up sudo
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
