@@ -6,15 +6,35 @@
 trigger:
 - master
 
-pool:
-  vmImage: 'ubuntu-latest'
+jobs:
+  - job: 'Clippy'
+    pool:
+      vmImage: 'ubuntu-latest'
+    container: 'ubuntu:19.04'
+    steps:
+      - script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+        displayName: Install rust
+      - script: rustup component add clippy
+        displayName: Install Clippy
+      - script: cargo clippy --all
+        displayName: Run clippy
 
-container: ubuntu:19.04
-
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: lsb_release -a
-  displayName: 'Check release'
+  - job: 'Test'
+    pool:
+      vmImage: 'ubuntu-latest'
+    container: 'ubuntu:19.04'
+    steps:
+      - script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+        displayName: Install rust
+      - script: |
+          apt install -y libcsfml-dev libsfml-dev
+        displayName: Install SFML & CSFML bindings
+      - script: cargo build --all
+        displayName: Cargo build
+      - script: RUST_TEST_THREADS=1 cargo test --all
+        displayName: Cargo test
 
