@@ -216,7 +216,6 @@ impl Player {
 
             //Don't start rendering until offset passes 0
             if sectors_since > 0 {
-
                 //Get background data from rainbow cycle, update texture, draw
                 //to window
                 let background_data = rainbow_cycle(&mut i, size);

@@ -73,7 +73,7 @@ fn initialize_db(db_path: PathBuf) -> Result<ConfigDB, failure::Error> {
         db.save()?;
     }
     match db.load() {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(_) => {
             println!("Config structure invalid, overwritting with default. Probably due to a change in structure compared to a prior release.");
             db.save()?;
@@ -90,7 +90,6 @@ pub fn load_config(
     data_path: Option<PathBuf>,
     no_collection_update: Option<bool>,
 ) -> Result<Config, failure::Error> {
-
     //If config_path supplied (from Arg), use that over default location
     let config_file: PathBuf;
     match config_path {
@@ -120,7 +119,10 @@ pub fn load_config(
     }
     println!("Using song dir: {:?}", config.song_path);
     println!("Using data dir: {:?}", config.data_path);
-    println!("Collection to be refreshed: {:?}", !config.no_collection_update);
+    println!(
+        "Collection to be refreshed: {:?}",
+        !config.no_collection_update
+    );
 
     Ok(config)
 }
@@ -148,8 +150,13 @@ mod tests {
         let config_path = PathBuf::from("tests/test_data/config.yaml");
         let song_path = PathBuf::from("test/test_data/songs");
         let data_path = PathBuf::from("test/test_data");
-        let config =
-            load_config(Some(config_path.clone()), Some(song_path), Some(data_path), Some(true)).unwrap();
+        let config = load_config(
+            Some(config_path.clone()),
+            Some(song_path),
+            Some(data_path),
+            Some(true),
+        )
+        .unwrap();
         let _config = Config {
             song_path: PathBuf::from("test/test_data/songs"),
             data_path: PathBuf::from("test/test_data"),

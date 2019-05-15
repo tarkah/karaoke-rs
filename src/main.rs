@@ -1,8 +1,10 @@
-
 extern crate self as karaoke;
 
 use clap::{App, Arg};
-use karaoke::config::{load_config, Config};
+use karaoke::{
+    collection::COLLECTION,
+    config::{load_config, Config},
+};
 use lazy_static::lazy_static;
 use std::{fs::metadata, path::PathBuf};
 
@@ -93,7 +95,9 @@ fn get_config() -> Result<Config, failure::Error> {
     };
     let no_collection_update = if matches.is_present("no-collection-update") {
         Some(true)
-    } else { None };
+    } else {
+        None
+    };
 
     //Load config file from config_path, override config with supplied Args, if applicable
     load_config(config_path, song_path, data_path, no_collection_update)

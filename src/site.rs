@@ -29,7 +29,6 @@ struct JsonStatus {
     status: &'static str,
 }
 
-
 fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     let context = HashMap::<String, u64>::new();
     let html = tera
