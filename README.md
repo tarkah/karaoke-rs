@@ -1,6 +1,5 @@
-[![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=master)
+# karaoke-rs [![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=master)
 
-# karaoke-rs
 A simple, network enabled karaoke player in Rust. 
 
 Your karaoke collection can be browsed and queued to the player from a self served website. Currently only supports MP3+G (mp3 & corresponding cdg) files. Only tested on Linux and Windows, but pull requests are welcome to get working on OSX.
