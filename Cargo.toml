@@ -5,11 +5,10 @@ authors = ["Cory Forsstrom <cforsstrom18@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+ggez = { git = "http://github.com/tarkah/ggez", rev = "04e90429a473f691b4b5f115c5f286977bde607d" }
 cdg = "0.1"
 cdg_renderer = "0.1"
 image = "0.10.0"
-minimp3 = "0.3.2"
-sfml = "0.14.0"
 glob = "0.3.0"
 id3 = "0.3.0"
 failure = "0.1.1"
