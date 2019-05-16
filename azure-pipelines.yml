@@ -26,6 +26,13 @@ jobs:
 
     steps:
       - script: |
+          /tmp/docker exec -t -u 0 ci-container \
+          sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
+        displayName: Set up sudo
+      - script: |
+          sudo apt install -y curl
+        displayName: Install curl
+      - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
         displayName: Install rust
       - script: |
@@ -53,6 +60,9 @@ jobs:
           /tmp/docker exec -t -u 0 ci-container \
           sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
         displayName: Set up sudo
+      - script: |
+          sudo apt install -y curl
+        displayName: Install curl
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
         displayName: Install rust
