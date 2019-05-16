@@ -30,8 +30,8 @@ jobs:
           sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
         displayName: Set up sudo
       - script: |
-          sudo apt install -y curl
-        displayName: Install curl
+          sudo apt install -y curl build-essential
+        displayName: Install curl & build-essential
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
         displayName: Install rust
@@ -61,7 +61,7 @@ jobs:
           sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
         displayName: Set up sudo
       - script: |
-          sudo apt install -y curl
+          sudo apt install -y curl build-essential
         displayName: Install curl
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
@@ -77,4 +77,3 @@ jobs:
           export PATH=$PATH:$HOME/.cargo/bin
           RUST_TEST_THREADS=1 cargo test --all
         displayName: Cargo test
-
