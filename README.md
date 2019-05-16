@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=azure-pipelines)
+[![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=azure-pipelines)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=azure-pipelines)
 
 # karaoke-rs
 A simple, network enabled karaoke player in Rust. 
