@@ -1,79 +1,189 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- master
+  branches:
+    include: ['master', 'azure-pipelines']
+  tags:
+    include: ['*']
 
-resources:
-  containers:
-  - container: u1904
-    image: 'ubuntu:19.04'
-    options: "--name ci-container -v /usr/bin/docker:/tmp/docker:ro"
+variables:
+  rust_test_threads: 1
 
 jobs:
   - job: 'Clippy'
-    pool:
-      vmImage: 'ubuntu-latest'
-    
+    condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
-        ubuntu1904:
-          containerResource: u1904
+        windows-stable:
+          imageName: 'vs2017-win2016'
+          rustup_toolchain: stable
+        linux-stable:
+          imageName: 'ubuntu-16.04'
+          rustup_toolchain: stable
 
-    container: $[ variables['containerResource'] ]
+    pool:
+      vmImage: $(imageName)
 
     steps:
       - script: |
-          /tmp/docker exec -t -u 0 ci-container \
-          sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
-        displayName: Set up sudo
+          sudo apt update
+          sudo apt install -y libasound2-dev libudev-dev pkg-config
+        displayName: Linux Install Dependencies
+        condition: eq( variables['imageName'], 'ubuntu-16.04' )
       - script: |
-          sudo apt install -y curl build-essential
-        displayName: Install curl & build-essential
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
+          echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+        displayName: Linux Install Rust
+        condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-        displayName: Install rust
-      - script: |
-          export PATH=$PATH:$HOME/.cargo/bin
-          rustup component add clippy
+          curl -sSf -o rustup-init.exe https://win.rustup.rs
+          rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
+          echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
+        displayName: Windows Install Rust
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      - script: rustup component add clippy
         displayName: Install Clippy
-      - script: |
-          export PATH=$PATH:$HOME/.cargo/bin
-          cargo clippy --all
-        displayName: Run clippy
+      - script: cargo clippy --all
+        displayName: Run Clippy
+
 
   - job: 'Test'
-    pool:
-      vmImage: 'ubuntu-latest'
-
+    condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
-        ubuntu1904:
-          containerResource: u1904
+        windows-stable:
+          imageName: 'vs2017-win2016'
+          rustup_toolchain: stable
+          target: 'x86_64-pc-windows-msvc'
+        linux-stable:
+          imageName: 'ubuntu-16.04'
+          rustup_toolchain: stable
+          target: 'x86_64-unknown-linux-gnu'
 
-    container: $[ variables['containerResource'] ]
+    pool:
+      vmImage: $(imageName)
 
     steps:
       - script: |
-          /tmp/docker exec -t -u 0 ci-container \
-          sh -c "apt-get update && apt-get -o Dpkg::Options::="--force-confold" -y install sudo"
-        displayName: Set up sudo
+          sudo apt update
+          sudo apt install -y libasound2-dev libudev-dev pkg-config
+        displayName: Linux Install Dependencies
+        condition: eq( variables['imageName'], 'ubuntu-16.04' )
       - script: |
-          sudo apt install -y curl build-essential
-        displayName: Install curl
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
+          echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+        displayName: Linux Install Rust
+        condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-        displayName: Install rust
+          curl -sSf -o rustup-init.exe https://win.rustup.rs
+          rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
+          echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
+        displayName: Windows Install Rust
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      - script: cargo build --all
+        displayName: Cargo Build
+      - script: cargo test --all
+        displayName: Cargo Test
+
+
+  - job: 'Release'
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+    strategy:
+      matrix:
+        windows-stable:
+          imageName: 'vs2017-win2016'
+          rustup_toolchain: stable
+          target: 'x86_64-pc-windows-msvc'
+        linux-stable:
+          imageName: 'ubuntu-16.04'
+          rustup_toolchain: stable
+          target: 'x86_64-unknown-linux-gnu'
+
+    pool:
+      vmImage: $(imageName)
+
+    steps:
+      - bash: |
+          DATE="$(date +%Y-%m-%d)"
+          echo "##vso[task.setvariable variable=build.date]$DATE"
+        displayName: "Create Date Variable"
+      - bash: |
+          MY_TAG="$(Build.SourceBranch)"
+          MY_TAG=${MY_TAG#refs/tags/}
+          echo $MY_TAG
+          echo "##vso[task.setvariable variable=build.my_tag]$MY_TAG"
+        displayName: "Create My Tag Variable"
       - script: |
-          sudo apt install -y libcsfml-dev libsfml-dev
-        displayName: Install SFML & CSFML bindings
+          sudo apt update
+          sudo apt install -y libasound2-dev libudev-dev pkg-config
+        displayName: Linux Install Dependencies
+        condition: eq( variables['imageName'], 'ubuntu-16.04' )
       - script: |
-          export PATH=$PATH:$HOME/.cargo/bin
-          cargo build --all
-        displayName: Cargo build
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
+          echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+        displayName: Linux Install Rust
+        condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - script: |
-          export PATH=$PATH:$HOME/.cargo/bin
-          RUST_TEST_THREADS=1 cargo test --all
-        displayName: Cargo test
+          curl -sSf -o rustup-init.exe https://win.rustup.rs
+          rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
+          echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
+        displayName: Windows Install Rust
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      - script: cargo build --release --all
+        displayName: Cargo Build
+      - script: cargo test --release --all
+        displayName: Cargo Test
+
+      - task: CopyFiles@2
+        displayName: Linux Copy Assets
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/target/release'
+          contents: |
+            karaoke-rs
+          targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
+        condition: ne( variables['Agent.OS'], 'Windows_NT' )
+      - task: CopyFiles@2
+        displayName: Windows Copy Assets
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/target/release'
+          contents: |
+            karaoke-rs.exe
+          targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      - task: CopyFiles@2
+        displayName: Shared Copy Assets
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)'
+          contents: |
+            README.md
+            LICENSE
+            screenshots/**.*
+          targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
+
+      - task: ArchiveFiles@2
+        displayName: Linux Gather Assets
+        inputs:
+          rootFolderOrFile: '$(Build.BinariesDirectory)/karaoke-rs'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).tar.gz'
+        condition: ne( variables['Agent.OS'], 'Windows_NT' )
+      - task: ArchiveFiles@2
+        displayName: Windows Gather Assets
+        inputs:
+          rootFolderOrFile: '$(Build.BinariesDirectory)/karaoke-rs'
+          archiveType: 'zip'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).zip'
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+      - task: GithubRelease@0
+        condition: succeeded()
+        inputs:
+          gitHubConnection: 'tarkah'
+          repositoryName: 'tarkah/karaoke-rs'
+          action: 'edit'
+          target: '$(build.sourceVersion)'
+          tagSource: 'manual'
+          tag: '$(build.my_tag)'
+          assets: '$(Build.ArtifactStagingDirectory)/*'
+          title: '$(build.my_tag) - $(build.date)'
+          assetUploadMode: 'replace'
+          addChangeLog: false
