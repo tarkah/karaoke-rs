@@ -1,7 +1,7 @@
 use crossbeam_channel::{select, Receiver, Sender};
 use ggez::{
     audio::{SoundData, SoundSource, Source},
-    conf,
+    conf::{self, Backend},
     event::{
         self,
         winit_event::{Event, KeyboardInput, WindowEvent},
@@ -14,6 +14,7 @@ use karaoke::{
     channel::{LiveCommand, PlayerCommand, LIVE_CHANNEL, PLAYER_CHANNEL},
     collection::Kfile,
     queue::PLAY_QUEUE,
+    CONFIG,
 };
 use std::{
     cell::RefCell,
@@ -113,13 +114,26 @@ impl Player {
     }
 
     fn play_song(&self, kfile: Kfile) -> Result<(), failure::Error> {
+        //Set OpenGL backend based off supplied args
+        let backend = if CONFIG.use_opengl_es {
+            Backend::default()
+                .gles()
+                .version(CONFIG.opengl_version_major, CONFIG.opengl_version_minor)
+        } else {
+            Backend::default()
+                .gl()
+                .version(CONFIG.opengl_version_major, CONFIG.opengl_version_minor)
+        };
+
         //Build context and event loop for ggez, get current monitor size
         //and resize window to fullscreen
-        let cb = ggez::ContextBuilder::new("karaoke-rs", "tarkah").window_mode(
-            conf::WindowMode::default()
-                .dimensions(1.0, 1.0)
-                .borderless(true),
-        );
+        let cb = ggez::ContextBuilder::new("karaoke-rs", "tarkah")
+            .window_mode(
+                conf::WindowMode::default()
+                    .dimensions(1.0, 1.0)
+                    .borderless(true),
+            )
+            .backend(backend);
         let (ctx, events_loop) = &mut cb.build()?;
         let window = graphics::window(ctx);
         let monitor = window.get_current_monitor();
