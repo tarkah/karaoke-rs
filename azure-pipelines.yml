@@ -45,7 +45,7 @@ jobs:
         displayName: Run Clippy
 
 
-  - job: 'Test'
+  - job: 'Test'    
     condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
@@ -85,6 +85,7 @@ jobs:
 
 
   - job: 'Release'
+    timeoutInMinutes: 0
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
     strategy:
       matrix:
@@ -92,10 +93,22 @@ jobs:
           imageName: 'vs2017-win2016'
           rustup_toolchain: stable
           target: 'x86_64-pc-windows-msvc'
+          docker: false
         linux-stable:
           imageName: 'ubuntu-16.04'
           rustup_toolchain: stable
           target: 'x86_64-unknown-linux-gnu'
+          docker: false
+        armv7-stable:
+          imageName: 'ubuntu-16.04'
+          rustup_toolchain: stable
+          target: 'armv7-unknown-linux-gnueabihf'
+          docker: true
+        aarch64-stable:
+          imageName: 'ubuntu-16.04'
+          rustup_toolchain: stable
+          target: 'aarch64-unknown-linux-gnu'
+          docker: true
 
     pool:
       vmImage: $(imageName)
@@ -111,33 +124,45 @@ jobs:
           echo $MY_TAG
           echo "##vso[task.setvariable variable=build.my_tag]$MY_TAG"
         displayName: "Create My Tag Variable"
+
       - script: |
           sudo apt update
           sudo apt install -y libasound2-dev libudev-dev pkg-config
         displayName: Linux Install Dependencies
-        condition: eq( variables['imageName'], 'ubuntu-16.04' )
+        condition: and( eq( variables['imageName'], 'ubuntu-16.04' ), eq( variables['docker'], 'false' ))
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
         displayName: Linux Install Rust
-        condition: ne( variables['Agent.OS'], 'Windows_NT' )
+        condition: and( ne( variables['Agent.OS'], 'Windows_NT' ), eq( variables['docker'], 'false' ))
       - script: |
           curl -sSf -o rustup-init.exe https://win.rustup.rs
           rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
           echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
         displayName: Windows Install Rust
-        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+        condition: and( eq( variables['Agent.OS'], 'Windows_NT' ), eq( variables['docker'], 'false' ))
       - script: cargo build --release --all
         displayName: Cargo Build
+        condition: eq( variables['docker'], 'false' )
       - script: cargo test --release --all
         displayName: Cargo Test
+        condition: eq( variables['docker'], 'false' )
+
+      - script: |
+         docker build -t tarkah/karaoke-rs:$TARGET ./ci/$TARGET/
+        displayName: Cross Setup Docker
+        condition: eq( variables['docker'], 'true' )
+      - script: |
+         docker run -v "$(pwd):/source" tarkah/karaoke-rs:$TARGET cargo build --release --manifest-path /source/Cargo.toml --target $TARGET
+        displayName: Cross Build
+        condition: eq( variables['docker'], 'true' )
 
       - task: CopyFiles@2
         displayName: Linux Copy Assets
         inputs:
-          sourceFolder: '$(Build.SourcesDirectory)/target/release'
+          sourceFolder: '$(Build.SourcesDirectory)'
           contents: |
-            karaoke-rs
+            target/**/release/karaoke-rs
           targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
         condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - task: CopyFiles@2
