@@ -117,13 +117,13 @@ jobs:
       - bash: |
           DATE="$(date +%Y-%m-%d)"
           echo "##vso[task.setvariable variable=build.date]$DATE"
-        displayName: "Create Date Variable"
+        displayName: Create Date Variable
       - bash: |
           MY_TAG="$(Build.SourceBranch)"
           MY_TAG=${MY_TAG#refs/tags/}
           echo $MY_TAG
           echo "##vso[task.setvariable variable=build.my_tag]$MY_TAG"
-        displayName: "Create My Tag Variable"
+        displayName: Create Tag Variable
 
       - script: |
           sudo apt update
@@ -158,23 +158,15 @@ jobs:
         condition: eq( variables['docker'], 'true' )
 
       - task: CopyFiles@2
-        displayName: Linux Copy Assets
+        displayName: Copy Binary
         inputs:
           sourceFolder: '$(Build.SourcesDirectory)'
           contents: |
-            target/**/release/karaoke-rs
+            target/**/release/?(karaoke-rs|karaoke-rs.exe)
           targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
-        condition: ne( variables['Agent.OS'], 'Windows_NT' )
+          flattenFolders: true
       - task: CopyFiles@2
-        displayName: Windows Copy Assets
-        inputs:
-          sourceFolder: '$(Build.SourcesDirectory)/target/release'
-          contents: |
-            karaoke-rs.exe
-          targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
-        condition: eq( variables['Agent.OS'], 'Windows_NT' )
-      - task: CopyFiles@2
-        displayName: Shared Copy Assets
+        displayName: Copy Assets
         inputs:
           sourceFolder: '$(Build.SourcesDirectory)'
           contents: |
@@ -184,7 +176,7 @@ jobs:
           targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
 
       - task: ArchiveFiles@2
-        displayName: Linux Gather Assets
+        displayName: Linux Archive
         inputs:
           rootFolderOrFile: '$(Build.BinariesDirectory)/karaoke-rs'
           archiveType: 'tar'
@@ -192,7 +184,7 @@ jobs:
           archiveFile: '$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).tar.gz'
         condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - task: ArchiveFiles@2
-        displayName: Windows Gather Assets
+        displayName: Windows Archive
         inputs:
           rootFolderOrFile: '$(Build.BinariesDirectory)/karaoke-rs'
           archiveType: 'zip'
@@ -200,6 +192,7 @@ jobs:
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
       - task: GithubRelease@0
+        displayName: Publish Assets to Github Release
         condition: succeeded()
         inputs:
           gitHubConnection: 'tarkah'
