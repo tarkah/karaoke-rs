@@ -353,9 +353,6 @@ mod tests {
             song_path: song_path.to_path_buf(),
             data_path: data_path.to_path_buf(),
             no_collection_update: false,
-            use_opengl_es: false,
-            opengl_version_major: 3,
-            opengl_version_minor: 2,
         };
         let initialize = CollectionDB::initialize(&config.data_path);
         assert!(initialize.is_ok());

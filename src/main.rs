@@ -1,6 +1,6 @@
 extern crate self as karaoke;
 
-use clap::{value_t, App, Arg};
+use clap::{App, Arg};
 use karaoke::{
     collection::COLLECTION,
     config::{load_config, Config},
@@ -71,25 +71,6 @@ fn get_config() -> Result<Config, failure::Error> {
                 .long("no-collection-update")
                 .help("Disable collection update on startup"),
         )
-        .arg(
-            Arg::with_name("use-opengl-es")
-                .long("use-opengl-es")
-                .help("Use OpenGL ES"),
-        )
-        .arg(
-            Arg::with_name("opengl-major")
-                .long("opengl-major")
-                .help("Sets OpenGL major version")
-                .value_name("INT")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("opengl-minor")
-                .long("opengl-minor")
-                .help("Sets OpenGL minor version")
-                .value_name("INT")
-                .takes_value(true),
-        )
         .get_matches();
 
     let config_path: Option<PathBuf>;
@@ -117,24 +98,9 @@ fn get_config() -> Result<Config, failure::Error> {
     } else {
         None
     };
-    let use_opengl_es = if matches.is_present("use-opengl-es") {
-        Some(true)
-    } else {
-        None
-    };
-    let opengl_version_major = value_t!(matches, "opengl-major", u8).ok();
-    let opengl_version_minor = value_t!(matches, "opengl-minor", u8).ok();
 
     //Load config file from config_path, override config with supplied Args, if applicable
-    load_config(
-        config_path,
-        song_path,
-        data_path,
-        no_collection_update,
-        use_opengl_es,
-        opengl_version_major,
-        opengl_version_minor,
-    )
+    load_config(config_path, song_path, data_path, no_collection_update)
 }
 
 fn validate_file(path: &str) -> Option<PathBuf> {

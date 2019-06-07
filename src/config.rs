@@ -51,9 +51,6 @@ pub struct Config {
     pub song_path: PathBuf,
     pub data_path: PathBuf,
     pub no_collection_update: bool,
-    pub use_opengl_es: bool,
-    pub opengl_version_major: u8,
-    pub opengl_version_minor: u8,
 }
 
 impl Default for Config {
@@ -62,9 +59,6 @@ impl Default for Config {
             song_path: SONG_DIR.to_path_buf(),
             data_path: DATA_DIR.to_path_buf(),
             no_collection_update: false,
-            use_opengl_es: false,
-            opengl_version_major: 3,
-            opengl_version_minor: 2,
         }
     }
 }
@@ -95,9 +89,6 @@ pub fn load_config(
     song_path: Option<PathBuf>,
     data_path: Option<PathBuf>,
     no_collection_update: Option<bool>,
-    use_opengl_es: Option<bool>,
-    opengl_version_major: Option<u8>,
-    opengl_version_minor: Option<u8>,
 ) -> Result<Config, failure::Error> {
     //If config_path supplied (from Arg), use that over default location
     let config_file: PathBuf;
@@ -126,32 +117,11 @@ pub fn load_config(
     if let Some(bool) = no_collection_update {
         config.no_collection_update = bool;
     }
-    if let Some(bool) = use_opengl_es {
-        config.use_opengl_es = bool;
-    }
-    if let Some(u8) = opengl_version_major {
-        config.opengl_version_major = u8;
-    }
-    if let Some(u8) = opengl_version_minor {
-        config.opengl_version_minor = u8;
-    }
     println!("Using song dir: {:?}", config.song_path);
     println!("Using data dir: {:?}", config.data_path);
     println!(
         "Collection to be refreshed: {:?}",
         !config.no_collection_update
-    );
-    println!(
-        "Using {}, version {}.{}",
-        {
-            if config.use_opengl_es {
-                "OpenGL ES"
-            } else {
-                "OpenGL"
-            }
-        },
-        config.opengl_version_major,
-        config.opengl_version_minor
     );
 
     Ok(config)
@@ -166,16 +136,7 @@ mod tests {
     fn test_create_default_config() {
         let config_path = PathBuf::from("tests/test_data/config.yaml");
         assert!(!config_path.is_file());
-        let config = load_config(
-            Some(config_path.clone()),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
-        .unwrap();
+        let config = load_config(Some(config_path.clone()), None, None, None).unwrap();
         assert!(config_path.is_file());
         assert_eq!(config, Config::default());
 
@@ -194,18 +155,12 @@ mod tests {
             Some(song_path),
             Some(data_path),
             Some(true),
-            Some(true),
-            Some(2),
-            Some(0),
         )
         .unwrap();
         let _config = Config {
             song_path: PathBuf::from("test/test_data/songs"),
             data_path: PathBuf::from("test/test_data"),
             no_collection_update: true,
-            use_opengl_es: true,
-            opengl_version_major: 2,
-            opengl_version_minor: 0,
         };
         assert_eq!(config, _config);
 
