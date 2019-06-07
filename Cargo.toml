@@ -5,7 +5,7 @@ authors = ["Cory Forsstrom <cforsstrom18@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-ggez = { git = "http://github.com/tarkah/ggez", rev = "04e90429a473f691b4b5f115c5f286977bde607d" }
+glium = "0.25.0"
 cdg = "0.1"
 cdg_renderer = "0.1"
 image = "0.10.0"
@@ -25,6 +25,15 @@ actix-web = "1.0.0-beta.4"
 actix-files = "0.1.0-beta.4"
 env_logger = "0.6"
 
+[dependencies.rodio]
+version = "0.8.1"
+default-features = false
+features = ["mp3"]
+
 [dependencies.rustbreak]
 version = "2.0.0-rc3"
 features = ["yaml_enc"]
+
+[patch.crates-io]
+nix = { git = "https://github.com/tarkah/nix/", rev = "b104e58cff878e565f63a82728c24f2c14ee74dd" }
+rodio = { git = "https://github.com/tomaka/rodio/", rev = "dba627a1b4b0562b6b30b17befc3108e356f3e6c" }

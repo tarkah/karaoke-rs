@@ -1,28 +1,23 @@
 use crossbeam_channel::{select, Receiver, Sender};
-use ggez::{
-    audio::{SoundData, SoundSource, Source},
-    conf::{self, Backend},
-    event::{
-        self,
-        winit_event::{Event, KeyboardInput, WindowEvent},
-    },
-    graphics::{self, DrawParam, Drawable, Rect},
-    mint::{Point2, Vector2},
-};
+use glium::{glutin, Surface};
+use glutin::{Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use image::GenericImage;
 use karaoke::{
     channel::{LiveCommand, PlayerCommand, LIVE_CHANNEL, PLAYER_CHANNEL},
     collection::Kfile,
     queue::PLAY_QUEUE,
-    CONFIG,
 };
+use rodio::{Sink, Source};
 use std::{
     cell::RefCell,
     f32::consts,
     fs::File,
     io::BufReader,
     rc::Rc,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicUsize, Ordering::SeqCst},
+        Arc, Mutex,
+    },
     thread,
     time::Duration,
 };
@@ -114,48 +109,30 @@ impl Player {
     }
 
     fn play_song(&self, kfile: Kfile) -> Result<(), failure::Error> {
-        //Set OpenGL backend based off supplied args
-        let backend = if CONFIG.use_opengl_es {
-            Backend::default()
-                .gles()
-                .version(CONFIG.opengl_version_major, CONFIG.opengl_version_minor)
-        } else {
-            Backend::default()
-                .gl()
-                .version(CONFIG.opengl_version_major, CONFIG.opengl_version_minor)
-        };
+        //Setup event loop & display
+        let mut events_loop = glutin::EventsLoop::new();
+        let wb =
+            glutin::WindowBuilder::new().with_fullscreen(Some(events_loop.get_primary_monitor()));
+        let cb = glutin::ContextBuilder::new();
+        let display = glium::Display::new(wb, cb, &events_loop)?;
 
-        //Build context and event loop for ggez, get current monitor size
-        //and resize window to fullscreen
-        let cb = ggez::ContextBuilder::new("karaoke-rs", "tarkah")
-            .window_mode(
-                conf::WindowMode::default()
-                    .dimensions(1.0, 1.0)
-                    .borderless(true),
-            )
-            .backend(backend);
-        let (ctx, events_loop) = &mut cb.build()?;
-        let window = graphics::window(ctx);
-        let monitor = window.get_current_monitor();
-        let win_size = monitor.get_dimensions();
-        graphics::set_mode(
-            ctx,
-            conf::WindowMode::default()
-                .dimensions(win_size.width as f32, win_size.height as f32)
-                .fullscreen_type(conf::FullscreenType::True)
-                .maximized(true),
-        )?;
-        graphics::set_screen_coordinates(
-            ctx,
-            Rect::new(0.0, 0.0, win_size.width as f32, win_size.height as f32),
-        )?;
-        graphics::clear(ctx, graphics::BLACK);
+        //Get dimensions of fullscreen window
+        let gl_window = display.gl_window();
+        let window = gl_window.window();
+        let dimensions = window.get_inner_size().unwrap();
 
-        //Load mp3 into sound buffer, pass into Sound struct which can manage playback
-        let mut music_file = File::open(&kfile.mp3_path)?;
-        let sound = SoundData::from_read(&mut music_file)?;
-        let mut source = Source::from_data(ctx, sound)?;
-        source.set_query_interval(std::time::Duration::from_millis(5));
+        //Create new output device, load mp3 into sound buffer, decode with rodio, setup periodic access
+        //to callback everytime 1ms has passed to track song position for synchronization
+        let device = rodio::default_output_device().unwrap();
+        let sink = Sink::new(&device);
+        let file = File::open(&kfile.mp3_path)?;
+        let counter = Arc::from(AtomicUsize::new(0));
+        let periodic_counter = counter.clone();
+        let access_time = Duration::from_millis(1);
+        let source =
+            rodio::Decoder::new(BufReader::new(file))?.periodic_access(access_time, move |_| {
+                let _ = periodic_counter.fetch_add(1, SeqCst);
+            });
 
         //Load cdg, create Subchannel Iterator to cycle through cdg sectors
         let cdg = File::open(&kfile.cdg_path)?;
@@ -166,17 +143,9 @@ impl Player {
         let cdg_y: f32 = 216.0;
         let cdg_scale = 1.5;
 
-        //Calculate center, size and scale of cdg image
-        let cdg_x_center = win_size.width as f32 * 0.5 - (cdg_x * cdg_scale) * 0.5;
-        let cdg_y_center = win_size.height as f32 * 0.5 - (cdg_y * cdg_scale) * 0.5;
-        let cdg_center = Point2 {
-            x: cdg_x_center,
-            y: cdg_y_center,
-        };
-        let cdg_scale = Vector2 {
-            x: cdg_scale,
-            y: cdg_scale,
-        };
+        //Calculate center cdg image
+        let cdg_x_center = dimensions.width as f32 * 0.5 - (cdg_x * cdg_scale) * 0.5;
+        let cdg_y_center = dimensions.height as f32 * 0.5 - (cdg_y * cdg_scale) * 0.5;
 
         //Counter and frequency for rainbow effect
         let mut i: f32 = 0.0;
@@ -193,14 +162,13 @@ impl Player {
         let mut cdg_image = image::RgbaImage::new(300, 216);
 
         //Play it!
-        source.play()?;
+        sink.append(source);
 
         //Loop will get current song position, calculate how many "cdg sectors"
         //have elasped in total (1 sector = 1/75th of a second), and subtract
         //last_sector_no to determine how many sectors worth of cdg commands need
         //to be iterated and processed by the CdgInterpreter. RGBA data can then
-        //be copied out of the interpreter and updated to a renderable in-GPU-memory
-        //image.
+        //be copied out of the interpreter and blitted to frame surface
         //
         //Every time a new frame is rendered, the background texture color will
         //update based on a sine wave function to smoothly cycle through the
@@ -209,7 +177,7 @@ impl Player {
         //Current song can be stopped with either ESC key or receiving a Stop
         //command.
         'player: loop {
-            let track_pos = source.elapsed().as_millis() as isize;
+            let track_pos = counter.load(SeqCst);
 
             //Offset rendering lyrics by 20 sectors, this syncs lyrics to music
             //almost perfectly
@@ -222,6 +190,7 @@ impl Player {
                 for _ in 0..sectors_since {
                     let sector = scsi.next();
 
+                    //Break the loop once no more sectors exist to render
                     if let Some(s) = sector {
                         for cmd in s {
                             cdg_interp.handle_cmd(cmd);
@@ -237,32 +206,44 @@ impl Player {
 
             //Don't start rendering until offset passes 0
             if sectors_since > 0 {
+                let mut frame = display.draw();
+
                 //Get background color from rainbow cycle, clear to window
                 let background_data = rainbow_cycle(&mut i, size);
-                let background_color = graphics::Color::from(background_data);
-                graphics::clear(ctx, background_color);
+                frame.clear_color(
+                    background_data.0,
+                    background_data.1,
+                    background_data.2,
+                    background_data.3,
+                );
 
                 //Get updated cdg frame from interpreter, copy into RGBA image,
-                //update to in-GPU-renderable image, draw to window
+                //update to texture, blit texture to frame surface with rectangle dimensions
                 cdg_image.copy_from(&cdg_interp, 0, 0);
-                let mut cdg_image_gl = ggez::graphics::Image::from_rgba8(
-                    ctx,
-                    cdg_x as u16,
-                    cdg_y as u16,
+                let cdg_image = glium::texture::RawImage2d::from_raw_rgba_reversed(
                     &cdg_image.clone().into_raw()[..],
-                )?;
-                cdg_image_gl.set_blend_mode(Some(graphics::BlendMode::Replace));
-                let draw_param = DrawParam::default().dest(cdg_center).scale(cdg_scale);
-                graphics::draw(ctx, &cdg_image_gl, draw_param)?;
+                    (cdg_x as u32, cdg_y as u32),
+                );
+                let cdg_image = glium::Texture2d::new(&display, cdg_image)?;
+                let cdg_rect = glium::BlitTarget {
+                    left: cdg_x_center as u32,
+                    bottom: cdg_y_center as u32,
+                    width: (cdg_x * cdg_scale) as i32,
+                    height: (cdg_y * cdg_scale) as i32,
+                };
+                cdg_image.as_surface().blit_whole_color_to(
+                    &frame,
+                    &cdg_rect,
+                    glium::uniforms::MagnifySamplerFilter::Linear,
+                );
 
                 //Render
-                graphics::present(ctx)?;
+                frame.finish()?;
             }
 
             //Quit song if ESC key pressed
             let mut _break = false;
             events_loop.poll_events(|event| {
-                ctx.process_event(&event);
                 if let Event::WindowEvent { event, .. } = event {
                     match event {
                         WindowEvent::CloseRequested => {
@@ -277,7 +258,7 @@ impl Player {
                                 },
                             ..
                         } => {
-                            if let event::KeyCode::Escape = keycode {
+                            if let VirtualKeyCode::Escape = keycode {
                                 *self.status.borrow_mut() = PlayerStatus::Stopped;
                                 _break = true;
                             }
@@ -301,14 +282,8 @@ impl Player {
                 default => {},
             }
 
-            //If song naturally ends, set PlayerStatus to stopped and return
-            if source.stopped() {
-                *self.status.borrow_mut() = PlayerStatus::Stopped;
-                break 'player;
-            }
-
             //Save some CPU time
-            ggez::timer::yield_now();
+            std::thread::sleep(Duration::from_millis(10));
         }
 
         Ok(())
@@ -316,18 +291,18 @@ impl Player {
 }
 
 //Sine wave formula for rainbow cycling background color
-fn rainbow_cycle(i: &mut f32, size: f32) -> (u8, u8, u8, u8) {
+fn rainbow_cycle(i: &mut f32, size: f32) -> (f32, f32, f32, f32) {
     *i = if (*i + 1.0) % size == 0.0 {
         0.0
     } else {
         *i + 1.0
     };
-    let red = (((consts::PI / size * 2.0 * *i + 0.0 * consts::PI / 3.0).sin() * 127.0).floor()
-        + 128.0) as u8;
-    let green = (((consts::PI / size * 2.0 * *i + 4.0 * consts::PI / 3.0).sin() * 127.0).floor()
-        + 128.0) as u8;
-    let blue = (((consts::PI / size * 2.0 * *i + 8.0 * consts::PI / 3.0).sin() * 127.0).floor()
-        + 128.0) as u8;
+    let red =
+        ((consts::PI / size * 2.0 * *i + 0.0 * consts::PI / 3.0).sin() * 127.0).floor() + 128.0;
+    let green =
+        ((consts::PI / size * 2.0 * *i + 4.0 * consts::PI / 3.0).sin() * 127.0).floor() + 128.0;
+    let blue =
+        ((consts::PI / size * 2.0 * *i + 8.0 * consts::PI / 3.0).sin() * 127.0).floor() + 128.0;
 
-    (red, green, blue, 255)
+    (red / 255.0, green / 255.0, blue / 255.0, 1.0)
 }
