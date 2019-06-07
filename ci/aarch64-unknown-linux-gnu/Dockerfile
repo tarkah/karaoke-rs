@@ -2,7 +2,7 @@ FROM debian:stretch
 
 RUN dpkg --add-architecture arm64 && \ 
     apt-get update && \
-    apt-get install -y curl build-essential libasound2-dev:arm64 libudev-dev:arm64 gcc-aarch64-linux-gnu pkg-config
+    apt-get install -y curl build-essential libasound2-dev:arm64 gcc-aarch64-linux-gnu pkg-config
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
 
