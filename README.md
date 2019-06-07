@@ -4,7 +4,7 @@ A simple, network enabled karaoke player in Rust.
 
 Your karaoke collection can be browsed and queued to the player from a self served website. Currently only supports MP3+G (mp3 & corresponding cdg) files.
 
-**_Now built off [ggez](https://github.com/ggez/ggez)! No more dependency on SFML, the binaries should run out of the box on any system._**
+**_Now built off [glium](https://github.com/tomaka/glium)! No more dependency on SFML, the binaries should run out of the box on any system. Confirmed working on Raspberry Pi 3B + with OpenGL 2.1_**
 
 
 ## Setup
@@ -13,6 +13,7 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 - Run `karaoke-rs --help` to see all arguments
 - Place your song collection at `~/.local/share/karaoke-rs/songs`, or specify location via `--songs path/to/song/directory`
 - Default configuration file is created at `~/.config/karaoke-rs/config.yaml`. This can be copied / changed and specified via `--config path/to/config.yaml`
+- You may need to force disable vsync to eliminate flickering, set environment variable `vblank_mode=0`
 
 ### Windows
 - Download latest release binary or compile from source -- `cargo build --release`
