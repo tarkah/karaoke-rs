@@ -1,0 +1,18 @@
+---
+# Uncomment and change values to override defaults
+
+# Linux
+#
+# Set a custom song directory
+#song_path: $HOME/.local/share/karaoke-rs/songs
+#
+# Set a custom data directory
+#data_path: $HOME/.local/share/karaoke-rs
+
+# Windows
+#
+#song_path: %APPDATA%/karaoke-rs/songs
+#data_path: %APPDATA%/karaoke-rs
+
+# Disable collection refresh on startup (helpful if collection is huge and not changing)
+#no_collection_update: false

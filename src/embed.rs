@@ -1,6 +1,9 @@
 use karaoke::CONFIG;
 use rust_embed::RustEmbed;
-use std::fs::{write, DirBuilder};
+use std::{
+    fs::{write, DirBuilder},
+    path::PathBuf,
+};
 
 #[derive(RustEmbed)]
 #[folder = "embed/templates"]
@@ -9,6 +12,10 @@ struct Templates;
 #[derive(RustEmbed)]
 #[folder = "embed/static"]
 struct Static;
+
+#[derive(RustEmbed)]
+#[folder = "embed/config"]
+struct Config;
 
 pub fn unload_files() {
     //Create templates folder in data path if not already exists
@@ -46,4 +53,12 @@ pub fn unload_files() {
         path.push(file.as_ref());
         write(path.as_path(), file_data.as_ref()).unwrap();
     }
+}
+
+pub fn create_config_if_not_exists(config_path: &PathBuf) -> Result<(), failure::Error> {
+    if !config_path.exists() {
+        let config = Config::get("config.yaml").unwrap();
+        write(config_path.as_path(), config.as_ref())?;
+    }
+    Ok(())
 }

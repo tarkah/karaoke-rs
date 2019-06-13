@@ -1,20 +1,11 @@
-// Loads configuration file, overriding values with supplied command line args
-// If it doesn't find one, it uses a default configuration
-//
-// Default configuration is created at `$XDG_CONFIG_HOME/karaoke-rs/config.yaml` as:
-// ```
-// ---
-// song_path: $XDG_DATA_HOME/karaoke-rs/songs
-// data_path: $XDG_DATA_HOME/karaoke-rs
-// ```
-//
+extern crate config as cfg;
+
 use dirs::{config_dir, data_dir};
+use karaoke::embed::create_config_if_not_exists;
 use lazy_static::lazy_static;
-use rustbreak::{deser::Yaml, FileDatabase};
 use serde_derive::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
 
-type ConfigDB = FileDatabase<Config, Yaml>;
 
 //Default locations, overriden if supplied in Config file or by Argument
 lazy_static! {
@@ -63,24 +54,23 @@ impl Default for Config {
     }
 }
 
-//If file doesn't exist, create default. Load db from file.
-fn initialize_db(db_path: PathBuf) -> Result<ConfigDB, failure::Error> {
-    let mut db: ConfigDB;
+//Use default config or override with valid values from file
+fn default_or_file(config_path: PathBuf) -> Result<Config, failure::Error> {
+    let mut _config = cfg::Config::new();
 
-    let exists = db_path.to_path_buf().exists();
-    db = FileDatabase::from_path(db_path.to_path_buf(), Config::default())?;
-    if !exists {
-        db.save()?;
+    //Serialize from default config struct
+    _config.merge(cfg::Config::try_from(&Config::default())?)?;
+
+    //If config file exists, merge and overwrite for values that exist
+    if config_path.is_file() {
+        let file = cfg::File::from(config_path).format(cfg::FileFormat::Yaml);
+        _config.merge(file)?;
     }
-    match db.load() {
-        Ok(_) => {}
-        Err(_) => {
-            println!("Config structure invalid, overwritting with default. Probably due to a change in structure compared to a prior release.");
-            db.save()?;
-        }
-    };
 
-    Ok(db)
+    //Deserialize back to Config struct
+    let config: Config = _config.try_into()?;
+
+    Ok(config)
 }
 
 //Loads a configuration file from default / supplied path, then overrides contents with any supplied args
@@ -102,10 +92,11 @@ pub fn load_config(
     }
     println!("Using config file: {:?}", config_file.display());
 
-    let db = initialize_db(config_file.to_path_buf())?;
+    //Write config template to path, if not exists
+    create_config_if_not_exists(&config_file)?;
 
     //get Config struct from db
-    let mut config = db.get_data(false)?;
+    let mut config = default_or_file(config_file)?;
 
     //Update config with supplied Args
     if let Some(path) = song_path {

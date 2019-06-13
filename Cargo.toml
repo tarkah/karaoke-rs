@@ -25,6 +25,11 @@ actix-web = "1.0.0"
 actix-files = "0.1.1"
 env_logger = "0.6"
 
+[dependencies.config]
+version = "0.9"
+default-features = false
+features = ['yaml']
+
 [dependencies.rodio]
 version = "0.8.1"
 default-features = false
