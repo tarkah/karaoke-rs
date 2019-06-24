@@ -55,8 +55,9 @@ impl Player {
 
         //Setup event loop & display
         let events_loop = glutin::EventsLoop::new();
-        let wb =
-            glutin::WindowBuilder::new().with_fullscreen(Some(events_loop.get_primary_monitor()));
+        let wb = glutin::WindowBuilder::new()
+            .with_fullscreen(Some(events_loop.get_primary_monitor()))
+            .with_title("Karaoke-rs");
         let cb = glutin::ContextBuilder::new();
         let display = glium::Display::new(wb, cb, &events_loop).unwrap();
 
