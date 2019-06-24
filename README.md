@@ -1,17 +1,22 @@
-<a href="assets/logo.png">
-    <img src="assets/logo.png" width="25%" />
-</a>
+<p align="center">
+  <a href="assets/logo.png">
+    <img src="assets/logo.png" width="30%" />
+  </a>
+</p>
+<p align="center">
+  A simple, network enabled karaoke player in Rust.
+</p>
+<p align="center">
+  <a href="https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=master">
+    <img src="https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master" />
+  </a>
+</p>
 
 ---
 
-[![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=master)
-
-A simple, network enabled karaoke player in Rust. 
-
-Your karaoke collection can be browsed and queued to the player from a self served website. Currently only supports MP3+G (mp3 & corresponding cdg) files.
+Your karaoke collection can be browsed and queued to the player from a self served website. Only supports MP3+G (mp3 & corresponding cdg) files.
 
 **_Now built off [glium](https://github.com/tomaka/glium)! No more dependency on SFML, the binaries should run out of the box on any system. Confirmed working on Raspberry Pi 3B + with OpenGL 2.1_**
-
 
 # Setup
 ### Linux
@@ -49,7 +54,9 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 ### Queue Page
 ![queue](/screenshots/queue.png?raw=true)
 
-### Player - background color rainbow cycles
+### Player
+![player1](/assets/background.png?raw=true)
+
 ![player1](/screenshots/player_1.png?raw=true)
 
 ![player2](/screenshots/player_2.png?raw=true)
