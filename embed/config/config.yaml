@@ -4,15 +4,15 @@
 # Linux
 #
 # Set a custom song directory
-#song_path: $HOME/.local/share/karaoke-rs/songs
+#song_path: /home/{username}/.local/share/karaoke-rs/songs
 #
 # Set a custom data directory
-#data_path: $HOME/.local/share/karaoke-rs
+#data_path: /home/{username}/.local/share/karaoke-rs
 
 # Windows
 #
-#song_path: %APPDATA%/karaoke-rs/songs
-#data_path: %APPDATA%/karaoke-rs
+#song_path: C:/Users/{username}/AppData/Roaming/karaoke-rs/songs
+#data_path: C:/Users/{username}/AppData/Roaming/karaoke-rs
 
 # Disable collection refresh on startup (helpful if collection is huge and not changing)
 #no_collection_update: false
