@@ -1,4 +1,10 @@
-# karaoke-rs [![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=master)
+<a href="assets/logo.png">
+    <img src="assets/logo.png" width="25%" />
+</a>
+
+---
+
+[![Build Status](https://dev.azure.com/cforsstrom18/karaoke-rs/_apis/build/status/tarkah.karaoke-rs?branchName=master)](https://dev.azure.com/cforsstrom18/karaoke-rs/_build/latest?definitionId=1&branchName=master)
 
 A simple, network enabled karaoke player in Rust. 
 
@@ -7,7 +13,7 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 **_Now built off [glium](https://github.com/tomaka/glium)! No more dependency on SFML, the binaries should run out of the box on any system. Confirmed working on Raspberry Pi 3B + with OpenGL 2.1_**
 
 
-## Setup
+# Setup
 ### Linux
 - Download latest release binary or compile from source -- `cargo build --release`
 - Run `karaoke-rs --help` to see all arguments
@@ -22,14 +28,14 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 - Default configuration file is created at `%APPDATA%\karaoke-rs\config.yaml`. This can be copied / changed and specified via `--config C:\path\to\config.yaml`
 - Ensure all paths supplied via argument are absolute from the root of the applicable drive. Relative paths appear to cause program to crash
 
-## TODO
+# TODO
 - [x] Finish setting up configuration file, allow specifying song directory and data directory (for collection db file)
 - [x] Allow passing config file location as argument
 - [x] Bundle website template / static files into build binary, unload them to data path on run, update Rocket to load templates / static files from that path
 - [ ] Setup proper logging and error handling
 
 
-## Screenshots
+# Screenshots
 
 ### Command Line
 ![cli](/screenshots/cli.png?raw=true)

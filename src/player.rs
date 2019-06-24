@@ -12,7 +12,7 @@ use std::{
     cell::RefCell,
     f32::consts,
     fs::File,
-    io::BufReader,
+    io::{BufReader, Cursor},
     rc::Rc,
     sync::{
         atomic::{AtomicUsize, Ordering::SeqCst},
@@ -35,7 +35,6 @@ pub enum PlayerStatus {
     Stopped,
 }
 
-#[derive(Debug)]
 pub struct Player {
     pub status: Rc<RefCell<PlayerStatus>>,
     pub player_sender: Sender<PlayerCommand>,
@@ -43,12 +42,42 @@ pub struct Player {
     pub live_sender: Sender<LiveCommand>,
     pub live_receiver: Receiver<LiveCommand>,
     pub queue: Arc<Mutex<Vec<Kfile>>>,
+    pub events_loop: Rc<RefCell<glutin::EventsLoop>>,
+    pub display: glium::Display,
+    pub dimensions: glutin::dpi::LogicalSize,
+    pub background: glium::texture::Texture2d,
 }
 
 impl Player {
     pub fn new() -> Self {
         let status = Rc::from(RefCell::from(PlayerStatus::Stopped));
         let queue = PLAY_QUEUE.clone();
+
+        //Setup event loop & display
+        let events_loop = glutin::EventsLoop::new();
+        let wb =
+            glutin::WindowBuilder::new().with_fullscreen(Some(events_loop.get_primary_monitor()));
+        let cb = glutin::ContextBuilder::new();
+        let display = glium::Display::new(wb, cb, &events_loop).unwrap();
+
+        //Get dimensions of fullscreen window
+        let gl_window = display.gl_window();
+        let window = gl_window.window();
+        let dimensions = window.get_inner_size().unwrap();
+        drop(gl_window);
+
+        //Load background image into Texture2d
+        let image = image::load(
+            Cursor::new(&include_bytes!("../assets/background.png")[..]),
+            image::PNG,
+        )
+        .unwrap()
+        .to_rgba();
+        let image_dimensions = image.dimensions();
+        let image =
+            glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let background = glium::texture::Texture2d::new(&display, image).unwrap();
+
         Player {
             status,
             player_sender: PLAYER_CHANNEL.0.clone(),
@@ -56,17 +85,51 @@ impl Player {
             live_sender: LIVE_CHANNEL.0.clone(),
             live_receiver: LIVE_CHANNEL.1.clone(),
             queue,
+            events_loop: Rc::from(RefCell::from(events_loop)),
+            display,
+            dimensions,
+            background,
         }
     }
 
     pub fn run(&self) {
+        self.clear_background().unwrap();
+
         loop {
             select! {
                 recv(self.player_receiver) -> cmd => self.process_cmd(cmd.unwrap()),
                 default() => self.check_queue(),
             };
             std::thread::sleep(Duration::from_millis(50));
+
+            self.events_loop.borrow_mut().poll_events(|event| {
+                if let Event::WindowEvent { event, .. } = event {
+                    if let WindowEvent::Focused(_) = event {
+                        self.clear_background().unwrap();
+                    }
+                };
+            });
         }
+    }
+
+    pub fn clear_background(&self) -> Result<(), failure::Error> {
+        let mut frame = self.display.draw();
+        frame.clear_color(0.0, 0.0, 0.0, 1.0);
+
+        let background_rect = glium::BlitTarget {
+            left: 0,
+            bottom: 0,
+            width: self.dimensions.width as i32,
+            height: self.dimensions.height as i32,
+        };
+        self.background.as_surface().blit_whole_color_to(
+            &frame,
+            &background_rect,
+            glium::uniforms::MagnifySamplerFilter::Linear,
+        );
+
+        frame.finish()?;
+        Ok(())
     }
 
     pub fn stop(&self) {
@@ -100,7 +163,6 @@ impl Player {
         }
     }
 
-    //
     fn empty_stale_live(&self) {
         select! {
             recv(self.live_receiver) -> _ => { },
@@ -109,17 +171,7 @@ impl Player {
     }
 
     fn play_song(&self, kfile: Kfile) -> Result<(), failure::Error> {
-        //Setup event loop & display
-        let mut events_loop = glutin::EventsLoop::new();
-        let wb =
-            glutin::WindowBuilder::new().with_fullscreen(Some(events_loop.get_primary_monitor()));
-        let cb = glutin::ContextBuilder::new();
-        let display = glium::Display::new(wb, cb, &events_loop)?;
-
-        //Get dimensions of fullscreen window
-        let gl_window = display.gl_window();
-        let window = gl_window.window();
-        let dimensions = window.get_inner_size().unwrap();
+        *self.status.borrow_mut() = PlayerStatus::Playing;
 
         //Create new output device, load mp3 into sound buffer, decode with rodio, setup periodic access
         //to callback everytime 1ms has passed to track song position for synchronization
@@ -144,8 +196,8 @@ impl Player {
         let cdg_scale = 1.5;
 
         //Calculate center cdg image
-        let cdg_x_center = dimensions.width as f32 * 0.5 - (cdg_x * cdg_scale) * 0.5;
-        let cdg_y_center = dimensions.height as f32 * 0.5 - (cdg_y * cdg_scale) * 0.5;
+        let cdg_x_center = self.dimensions.width as f32 * 0.5 - (cdg_x * cdg_scale) * 0.5;
+        let cdg_y_center = self.dimensions.height as f32 * 0.5 - (cdg_y * cdg_scale) * 0.5;
 
         //Counter and frequency for rainbow effect
         let mut i: f32 = 0.0;
@@ -196,7 +248,6 @@ impl Player {
                             cdg_interp.handle_cmd(cmd);
                         }
                     } else {
-                        *self.status.borrow_mut() = PlayerStatus::Stopped;
                         break 'player;
                     }
                 }
@@ -206,7 +257,7 @@ impl Player {
 
             //Don't start rendering until offset passes 0
             if sectors_since > 0 {
-                let mut frame = display.draw();
+                let mut frame = self.display.draw();
 
                 //Get background color from rainbow cycle, clear to window
                 let background_data = rainbow_cycle(&mut i, size);
@@ -224,7 +275,7 @@ impl Player {
                     &cdg_image.clone().into_raw()[..],
                     (cdg_x as u32, cdg_y as u32),
                 );
-                let cdg_image = glium::Texture2d::new(&display, cdg_image)?;
+                let cdg_image = glium::Texture2d::new(&self.display, cdg_image)?;
                 let cdg_rect = glium::BlitTarget {
                     left: cdg_x_center as u32,
                     bottom: cdg_y_center as u32,
@@ -243,11 +294,10 @@ impl Player {
 
             //Quit song if ESC key pressed
             let mut _break = false;
-            events_loop.poll_events(|event| {
+            self.events_loop.borrow_mut().poll_events(|event| {
                 if let Event::WindowEvent { event, .. } = event {
                     match event {
                         WindowEvent::CloseRequested => {
-                            *self.status.borrow_mut() = PlayerStatus::Stopped;
                             _break = true;
                         }
                         WindowEvent::KeyboardInput {
@@ -259,7 +309,6 @@ impl Player {
                             ..
                         } => {
                             if let VirtualKeyCode::Escape = keycode {
-                                *self.status.borrow_mut() = PlayerStatus::Stopped;
                                 _break = true;
                             }
                         }
@@ -275,7 +324,6 @@ impl Player {
             select! {
                 recv(self.live_receiver) -> cmd => {
                     if cmd.unwrap() == LiveCommand::Stop {
-                        *self.status.borrow_mut() = PlayerStatus::Stopped;
                         break 'player;
                     }
                 },
@@ -285,7 +333,8 @@ impl Player {
             //Save some CPU time
             std::thread::sleep(Duration::from_millis(10));
         }
-
+        *self.status.borrow_mut() = PlayerStatus::Stopped;
+        self.clear_background().unwrap();
         Ok(())
     }
 }
