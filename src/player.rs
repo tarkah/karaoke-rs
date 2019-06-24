@@ -5,6 +5,7 @@ use image::GenericImage;
 use karaoke::{
     channel::{LiveCommand, PlayerCommand, LIVE_CHANNEL, PLAYER_CHANNEL},
     collection::Kfile,
+    embed::Assets,
     queue::PLAY_QUEUE,
 };
 use rodio::{Sink, Source};
@@ -69,7 +70,7 @@ impl Player {
 
         //Load background image into Texture2d
         let image = image::load(
-            Cursor::new(&include_bytes!("../assets/background.png")[..]),
+            Cursor::new(&Assets::get("background.png").unwrap()[..]),
             image::PNG,
         )
         .unwrap()

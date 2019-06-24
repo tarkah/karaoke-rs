@@ -17,6 +17,10 @@ struct Static;
 #[folder = "embed/config"]
 struct Config;
 
+#[derive(RustEmbed)]
+#[folder = "assets"]
+pub struct Assets;
+
 pub fn unload_files() {
     //Create templates folder in data path if not already exists
     let mut templates_path = CONFIG.data_path.clone();
