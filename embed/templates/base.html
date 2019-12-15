@@ -7,30 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/dt-1.10.18/datatables.min.css"/>
- 
-    <style>     
-        .align-items-center {
-            display: flex;
-            align-items: center;
-            /*Aligns vertically center */
-            justify-content: center;
-            /*Aligns horizontally center */
-        }
-
-        #toast-container{position:sticky;z-index:1055;top:0}#toast-wrapper{position:absolute;top:0;right:0;margin:5px}#toast-container>#toast-wrapper>.toast{min-width:150px}#toast-container>#toast-wrapper>.toast>.toast-header strong{padding-right:20px}
-    </style>
+    <link rel="stylesheet" href="/static/styles.css" />
 
     <title>Karaoke-rs</title>
 </head>
 
 <body>
+    <div id="toast-container"></div>
+
     <!-- header nav-->
 
-    <div class="container fixed-top bg-white align-items-center border-bottom pt-2 pb-1">        
+    <div class="container fixed-top bg-white align-items-center border-bottom pt-2 pb-1">
         <div class="column">
-            <div class="row align-items-center">       
+            <div class="row align-items-center">
                 <h2>Karaoke-rs</h2>
             </div>
             <div class="row align-items-center">
@@ -63,7 +52,7 @@
                         <h5>Queue</h5>
                     </a>
                 </span>
-            </div>     
+            </div>
         </div>
     </div>
 
@@ -71,219 +60,10 @@
     <main class="container" role="main" style="padding-top: 100px">
         <!-- extends -->
         {% block content %}
-        {% endblock content %}        
+        {% endblock content %}
     </main>
 
-    
-    <!-- Optional JavaScript -->
-    <script src="https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/dt-1.10.18/datatables.min.js"></script>
-
-    <script>
-        $(document).ready(function() {
-            $('#datatable').DataTable( {
-                "pageLength": 100,
-                "lengthMenu": [ 25, 50, 100, 250, 500, 1000 ],
-                // scrollY: 400,
-                // scrollCollapse: true
-            });   
-        }); 
-
-        function addQueue(elem) {                
-            $.ajax({
-                type: "POST",
-                url: "/api/add",
-                data: { 
-                    hash: elem.value,
-                },
-                success: function(result) {
-                    add_success_snack()
-                    
-                },
-                error: function(result) {
-                    add_error_snack()
-                }
-            });
-        };
-
-        function playNow(elem) {                
-            $.ajax({
-                type: "POST",
-                url: "/api/playnow",
-                data: { 
-                    hash: elem.value,
-                },
-                success: function(result) {
-                    play_success_snack()
-                    
-                },
-                error: function(result) {
-                    play_error_snack()
-                }
-            });
-        };
-
-        function next(elem) {
-            $.ajax({
-                type: "POST",
-                url: "/api/next",  
-                success: function(result) {
-                    window.location.href = '/queue';
-                    next_success_snack()
-                },
-                error: function(result) {
-                    next_error_snack()
-                }
-            });
-        }; 
-
-        function clearQueue(elem) {
-            $.ajax({
-                type: "POST",
-                url: "/api/clear",  
-                success: function(result) {                                        
-                    window.location.href = '/queue';
-                    clear_success_snack()                
-                },
-                error: function(result) {
-                    clear_error_snack()
-                }
-            });
-        };
-
-        function stop(elem) {
-            $.ajax({
-                type: "POST",
-                url: "/api/stop",  
-                success: function(result) {
-                    window.location.href = '/queue';                    
-                    stop_success_snack()
-                },
-                error: function(result) {
-                    stop_error_snack()
-                }
-            });
-        };       
-
-        (function(b){b.toast=function(a,h,g,l,k){b("#toast-container").length||(b("body").prepend('<div id="toast-container" aria-live="polite" aria-atomic="true"></div>'),b("#toast-container").append('<div id="toast-wrapper"></div>'));var c="",d="",e="text-muted",f="",m="object"===typeof a?a.title||"":a||"Notice!";h="object"===typeof a?a.subtitle||"":h||"";g="object"===typeof a?a.content||"":g||"";k="object"===typeof a?a.delay||3E3:k||3E3;switch("object"===typeof a?a.type||"":l||"info"){case "info":c="bg-info";
-        f=e=d="text-white";break;case "success":c="bg-success";f=e=d="text-white";break;case "warning":case "warn":c="bg-warning";f=e=d="text-white";break;case "error":case "danger":c="bg-danger",f=e=d="text-white"}a='<div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="'+k+'">'+('<div class="toast-header '+c+" "+d+'">')+('<strong class="mr-auto">'+m+"</strong>");a+='<small class="'+e+'">'+h+"</small>";a+='<button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">';
-        a+='<span aria-hidden="true" class="'+f+'">&times;</span>';a+="</button>";a+="</div>";""!==g&&(a+='<div class="toast-body">',a+=g,a+="</div>");a+="</div>";b("#toast-wrapper").append(a);b("#toast-wrapper .toast:last").toast("show")}})(jQuery);
-
-
-        const TYPES = ['info', 'warning', 'success', 'error'];    
-
-        function add_success_snack() {
-            let type = 'success',
-                content = 'Added to Queue';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function add_error_snack() {
-            let type = 'error',
-                content = 'Failed to Add';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function play_success_snack() {
-            let type = 'success',
-                content = 'Playing Now';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function play_error_snack() {
-            let type = 'error',
-                content = 'Failed to Play';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function next_success_snack() {
-            let type = 'success',
-                content = 'Next song playing';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function next_error_snack() {
-            let type = 'error',
-                content = 'Failed to play next';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function clear_success_snack() {
-            let type = 'success',
-                content = 'Queue cleared';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function clear_error_snack() {
-            let type = 'error',
-                content = 'Failed to clear queue';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function stop_success_snack() {
-            let type = 'success',
-                content = 'Player stopped';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-
-        function stop_error_snack() {
-            let type = 'error',
-                content = 'Failed to stop player';
-                
-            $.toast({
-                title: content,
-                type: type,
-                delay: 3000
-            });
-        };
-    </script>
+    <script src="/static/script.js"></script>
 
 </body>
 
