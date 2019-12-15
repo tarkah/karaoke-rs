@@ -6,6 +6,12 @@
 
 body {
     font-family: sans-serif;
+    background-image: url("background.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+    height: 100vh;
+    color: white;
 }
 
 .align-items-center {
@@ -102,4 +108,33 @@ body {
 
 .table-striped tbody tr:nth-child(odd) {
     background: rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.header__navigation-item {
+    padding: 8px;
+    margin: 4px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.5);
+    border-bottom: 3px solid rgba(255, 255, 255, 0.5);
+    transition: 0.1s ease-in-out all;
+}
+
+.header__navigation-item:hover {
+    border-bottom-color: white;
+    color: white;
+}
+
+.header__navigation-item--active {
+    border-bottom-color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.content {
+    padding: 16px;
 }

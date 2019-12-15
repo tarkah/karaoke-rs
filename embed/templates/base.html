@@ -1,70 +1,26 @@
+{% block init %}
+{% endblock init %}
 <!doctype html>
 <html lang="en">
+    <head>
+        <!-- Required meta tags -->
+        <link rel="stylesheet" type="text/css" href="../static/styles.css"/>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-<head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+        <link rel="stylesheet" href="/static/styles.css" />
 
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="/static/styles.css" />
-
-    <title>Karaoke-rs</title>
-</head>
-
-<body>
-    <div id="toast-container"></div>
-
-    <!-- header nav-->
-
-    <div class="container fixed-top bg-white align-items-center border-bottom pt-2 pb-1">
-        <div class="column">
-            <div class="row align-items-center">
-                <h2>Karaoke-rs</h2>
-            </div>
-            <div class="row align-items-center">
-                <span>
-                    <a href="/">
-                        <h5>Home</h5>
-                    </a>
-                </span>
-                <span>
-                    <h5>&nbsp;|&nbsp;</h5>
-                </span>
-                <span>
-                    <a href="/songs">
-                        <h5>Songs</h5>
-                    </a>
-                </span>
-                <span>
-                    <h5>&nbsp;|&nbsp;</h5>
-                </span>
-                <span>
-                    <a href="/artists">
-                        <h5>Artists</h5>
-                    </a>
-                </span>
-                <span>
-                    <h5>&nbsp;|&nbsp;</h5>
-                </span>
-                <span>
-                    <a href="/queue">
-                        <h5>Queue</h5>
-                    </a>
-                </span>
-            </div>
-        </div>
-    </div>
-
-
-    <main class="container" role="main" style="padding-top: 100px">
-        <!-- extends -->
-        {% block content %}
-        {% endblock content %}
-    </main>
-
-    <script src="/static/script.js"></script>
-
-</body>
-
+        <title>Karaoke-rs</title>
+    </head>
+    <body>
+        <div id="toast-container"></div>
+        {% include "header.html" %}
+        <main class="content" role="main">
+            <!-- extends -->
+            {% block content %}
+            {% endblock content %}
+        </main>
+        <script src="/static/script.js"></script>
+    </body>
 </html>
