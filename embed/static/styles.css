@@ -57,12 +57,13 @@ a:hover {
     top: 0;
     right: 0;
     display: flex;
+    padding: 4px;
     flex-direction: column-reverse;
 }
 
 .toast {
     min-width: 150px;
-    margin: 8px;
+    margin: 4px;
     padding: 8px;
     border: 2px solid;
     color: rgba(255, 255, 255, 0.87);
