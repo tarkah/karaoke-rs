@@ -1,5 +1,10 @@
 const DEFAULT_PAGE_SIZE = 100;
 
+const SORT_DIRECTION = {
+    ASC: 0,
+    DESC: 1
+};
+
 (() => {
     const table = document.getElementById('datatable');
     if (table) {
@@ -18,17 +23,34 @@ const DEFAULT_PAGE_SIZE = 100;
                 size: DEFAULT_PAGE_SIZE,
                 page: 0,
                 pages: Math.ceil(data.length / DEFAULT_PAGE_SIZE)
+            },
+            sorting: {
+                column: 0,
+                direction: SORT_DIRECTION.ASC
             }
         };
         const render = () => {
+            sortData(data, query.sorting);
             renderData(body, applyQuery(data, query));
             renderPaging(footer, query.paging, page => {
                 query.paging.page = page;
                 render();
             });
+            renderHeader(header, query.sorting);
         };
         filter.addEventListener('input', () => {
             query.filter = filter.value;
+            render();
+        });
+        enhanceHeader(header, column => {
+            if (column === query.sorting.column) {
+                query.sorting.direction = (query.sorting.direction + 1) % 2
+            }else {
+                query.sorting = {
+                    column,
+                    direction: SORT_DIRECTION.ASC
+                }
+            }
             render();
         });
 
@@ -57,6 +79,44 @@ const DEFAULT_PAGE_SIZE = 100;
         row.appendChild(column);
         table.appendChild(footer);
         return column;
+    }
+
+    function sortData(data, sorting) {
+        data.sort((leftRow, rightRow) => {
+            const leftField = leftRow.data[sorting.column];
+            const rightField = rightRow.data[sorting.column];
+
+            const result = leftField.localeCompare(rightField);
+            if (sorting.direction === SORT_DIRECTION.ASC) {
+                return result;
+            }else {
+                return result * -1;
+            }
+        });
+    }
+    
+    function enhanceHeader(header, update) {
+        const columns = header.querySelectorAll('[data-sortable]');
+        for (let i = 0; i < columns.length; i++) {
+            const column = columns[i];
+            column.classList.add('table__sortable-header');
+            column.addEventListener('click', () => update(i));
+        }
+    }
+
+    function renderHeader(header, sorting) {
+        const columns = header.querySelectorAll('.table__sortable-header');
+        for (let i = 0; i < columns.length; i++) {
+            const column = columns[i];
+            column.classList.remove('table__sortable-header--asc', 'table__sortable-header--desc');
+            if (i === sorting.column) {
+                if (sorting.direction === SORT_DIRECTION.ASC) {
+                    column.classList.add('table__sortable-header--asc');
+                }else {
+                    column.classList.add('table__sortable-header--desc');
+                }
+            }
+        }
     }
 
     function applyQuery(data, query) {

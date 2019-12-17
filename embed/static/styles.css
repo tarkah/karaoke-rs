@@ -134,6 +134,26 @@ a:hover {
     background: rgba(0, 0, 0, 0.1);
 }
 
+.table__sortable-header {
+    cursor: pointer;
+    transition: 0.1s ease-in-out all;
+}
+
+.table__sortable-header::after {
+    padding: 8px;
+}
+
+.table__sortable-header:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.table__sortable-header--asc::after {
+    content: '\25B4';
+}
+.table__sortable-header--desc::after {
+    content: '\25BE';
+}
+
 /* PAGING */
 .table-paging {
     padding: 8px;
