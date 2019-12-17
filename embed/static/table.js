@@ -44,12 +44,12 @@ const SORT_DIRECTION = {
         });
         enhanceHeader(header, column => {
             if (column === query.sorting.column) {
-                query.sorting.direction = (query.sorting.direction + 1) % 2
-            }else {
+                query.sorting.direction = (query.sorting.direction + 1) % 2;
+            } else {
                 query.sorting = {
                     column,
                     direction: SORT_DIRECTION.ASC
-                }
+                };
             }
             render();
         });
@@ -89,12 +89,12 @@ const SORT_DIRECTION = {
             const result = leftField.localeCompare(rightField);
             if (sorting.direction === SORT_DIRECTION.ASC) {
                 return result;
-            }else {
+            } else {
                 return result * -1;
             }
         });
     }
-    
+
     function enhanceHeader(header, update) {
         const columns = header.querySelectorAll('[data-sortable]');
         for (let i = 0; i < columns.length; i++) {
@@ -112,7 +112,7 @@ const SORT_DIRECTION = {
             if (i === sorting.column) {
                 if (sorting.direction === SORT_DIRECTION.ASC) {
                     column.classList.add('table__sortable-header--asc');
-                }else {
+                } else {
                     column.classList.add('table__sortable-header--desc');
                 }
             }
@@ -123,13 +123,9 @@ const SORT_DIRECTION = {
         const startIndex = query.paging.size * query.paging.page;
         const endIndex = query.paging.size * (query.paging.page + 1);
         const filter = query.filter.toLowerCase().split(' ');
-        return data.filter((row, index) => {
-            const isPage = startIndex <= index && index < endIndex;
-            if (!isPage) {
-                return false;
-            }
-            return filter.every(f => row.data.some(d => d.toLowerCase().includes(f)));
-        });
+        return data
+            .filter(row => filter.every(f => row.data.some(d => d.toLowerCase().includes(f))))
+            .filter((row, index) => startIndex <= index && index < endIndex);
     }
 
     function renderData(tbody, data) {
@@ -157,19 +153,19 @@ const SORT_DIRECTION = {
         container.appendChild(prevBtn);
         if (paging.pages <= 5) {
             createPages(container, paging, update);
-        }else if (paging.page <= 3) {
+        } else if (paging.page <= 3) {
             createPageButton(container, paging, 0, update);
             createPageButton(container, paging, 1, update);
             createPageButton(container, paging, 2, update);
             createPageButton(container, paging, 3, update);
             createPageMoreButton(container);
-        }else if (paging.pages - 4 < paging.page) {
+        } else if (paging.pages - 4 < paging.page) {
             createPageMoreButton(container);
             createPageButton(container, paging, paging.pages - 4, update);
             createPageButton(container, paging, paging.pages - 3, update);
             createPageButton(container, paging, paging.pages - 2, update);
             createPageButton(container, paging, paging.pages - 1, update);
-        }else {
+        } else {
             createPageMoreButton(container);
             createPageButton(container, paging, paging.page - 1, update);
             createPageButton(container, paging, paging.page, update);
