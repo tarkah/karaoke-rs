@@ -47,7 +47,7 @@ enum DataType {
 }
 
 fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
-    let context = HashMap::<String, u64>::new();
+    let context = Context::new();
     let html = tera
         .render("index.html", &context)
         .map_err(|_| error::ErrorInternalServerError("Template error"))?;
@@ -55,7 +55,7 @@ fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
 }
 
 fn songs(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
-    let context = HashMap::<String, u64>::new();
+    let context = Context::new();
     let html = tera
         .render("songs.html", &context)
         .map_err(|_| error::ErrorInternalServerError("Template error"))?;
@@ -77,7 +77,7 @@ fn api_songs(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
 }
 
 fn artists(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
-    let context = HashMap::<String, u64>::new();
+    let context = Context::new();
     let html = tera
         .render("artists.html", &context)
         .map_err(|_| error::ErrorInternalServerError("Template error"))?;
