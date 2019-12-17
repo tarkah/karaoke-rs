@@ -6,7 +6,6 @@ use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
 
-
 //Default locations, overriden if supplied in Config file or by Argument
 lazy_static! {
     pub static ref CONF_FILE: PathBuf = {

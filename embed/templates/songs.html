@@ -13,20 +13,18 @@
         </tr>
     </thead>
     <tbody>
-        {% for key, kfile in by_song %}
         <tr>
-            <td data-sortable="true">{{ kfile.song }}</td>
+            <td data-sortable="true">FILL ME IN</td>
             <td data-sortable="true">
-                <a href="/artist/{{ kfile.artist_hash }}">
-                    {{ kfile.artist }}
+                <a href="/artist/FILLMEIN">
+                    FILL ME IN
                 </a>
             </td> 
             <td>
-                <button onclick="addQueue(this)" value="{{ key }}" class="button" role="button" aria-pressed="true">Add to Queue</button>
-                <button onclick="playNow(this)" value="{{ key }}" class="button" role="button" aria-pressed="true">Play</button>
+                <button onclick="addQueue(this)" value="FILLMEIN" class="button" role="button" aria-pressed="true">Add to Queue</button>
+                <button onclick="playNow(this)" value="FILLMEIN" class="button" role="button" aria-pressed="true">Play</button>
             </td>         
         </tr>
-        {% endfor %}
     </tbody>
 </table>
 {% endblock content %}

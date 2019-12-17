@@ -2,7 +2,7 @@ use actix_web::{error, guard, middleware, web, App, Error, HttpResponse, HttpSer
 use crossbeam_channel::Sender;
 use karaoke::{
     channel::{WorkerCommand, WORKER_CHANNEL},
-    collection::{Collection, Kfile, COLLECTION},
+    collection::{Artist, Collection, Kfile, COLLECTION},
     queue::PLAY_QUEUE,
     CONFIG,
 };
@@ -13,6 +13,7 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use tera::Context;
 
 #[derive(Deserialize)]
 struct Song {
@@ -29,6 +30,22 @@ struct JsonStatus {
     status: &'static str,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Response {
+    status: &'static str,
+    data: Option<DataType>,
+    page: u32,
+    total_pages: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+enum DataType {
+    #[serde(rename = "songs")]
+    Song(HashMap<u64, Kfile>),
+    #[serde(rename = "artists")]
+    Artist(HashMap<u64, Artist>),
+}
+
 fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     let context = HashMap::<String, u64>::new();
     let html = tera
@@ -37,24 +54,48 @@ fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().content_type("text/html").body(html))
 }
 
-fn songs(
-    tera: web::Data<tera::Tera>,
-    collection: web::Data<Collection>,
-) -> Result<HttpResponse, Error> {
+fn songs(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
+    let context = HashMap::<String, u64>::new();
     let html = tera
-        .render("songs.html", collection.get_ref())
+        .render("songs.html", &context)
         .map_err(|_| error::ErrorInternalServerError("Template error"))?;
     Ok(HttpResponse::Ok().content_type("text/html").body(html))
 }
 
-fn artists(
-    tera: web::Data<tera::Tera>,
-    collection: web::Data<Collection>,
-) -> Result<HttpResponse, Error> {
+fn api_songs(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
+    let songs = collection.get_ref().by_song.clone();
+    let response = Response {
+        status: "ok",
+        data: Some(DataType::Song(songs)),
+        page: 1,
+        total_pages: 1,
+    };
+    let body = serde_json::to_string(&response)?;
+    Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .body(&body))
+}
+
+fn artists(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
+    let context = HashMap::<String, u64>::new();
     let html = tera
-        .render("artists.html", collection.get_ref())
+        .render("artists.html", &context)
         .map_err(|_| error::ErrorInternalServerError("Template error"))?;
     Ok(HttpResponse::Ok().content_type("text/html").body(html))
+}
+
+fn api_artists(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
+    let artists = collection.get_ref().by_artist.clone();
+    let response = Response {
+        status: "ok",
+        data: Some(DataType::Artist(artists)),
+        page: 1,
+        total_pages: 1,
+    };
+    let body = serde_json::to_string(&response)?;
+    Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .body(&body))
 }
 
 fn artist(
@@ -181,6 +222,8 @@ pub fn run() -> std::io::Result<()> {
             .service(web::resource("/api/next").route(web::post().to(next)))
             .service(web::resource("/api/clear").route(web::post().to(clear)))
             .service(web::resource("/api/stop").route(web::post().to(stop)))
+            .service(web::resource("/api/songs").route(web::get().to(api_songs)))
+            .service(web::resource("/api/artists").route(web::get().to(api_artists)))
             .service(actix_files::Files::new("/static", static_path))
             .default_service(
                 // 404 for GET request
