@@ -2,7 +2,7 @@ use actix_web::{error, guard, middleware, web, App, Error, HttpResponse, HttpSer
 use crossbeam_channel::Sender;
 use karaoke::{
     channel::{WorkerCommand, WORKER_CHANNEL},
-    collection::{Artist, Collection, Kfile, COLLECTION},
+    collection::{Collection, Kfile, COLLECTION},
     queue::PLAY_QUEUE,
     CONFIG,
 };
@@ -31,6 +31,21 @@ struct JsonStatus {
 }
 
 #[derive(Serialize, Deserialize)]
+struct ResponseSong {
+    id: u64,
+    name: String,
+    artist_id: u64,
+    artist_name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ResponseArtist {
+    id: u64,
+    name: String,
+    num_songs: usize,
+}
+
+#[derive(Serialize, Deserialize)]
 struct Response {
     status: &'static str,
     data: Option<DataType>,
@@ -41,9 +56,9 @@ struct Response {
 #[derive(Serialize, Deserialize)]
 enum DataType {
     #[serde(rename = "songs")]
-    Song(HashMap<u64, Kfile>),
+    Song(Vec<ResponseSong>),
     #[serde(rename = "artists")]
-    Artist(HashMap<u64, Artist>),
+    Artist(Vec<ResponseArtist>),
 }
 
 fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
@@ -64,6 +79,18 @@ fn songs(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
 
 fn api_songs(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
     let songs = collection.get_ref().by_song.clone();
+    let mut songs: Vec<ResponseSong> = songs
+        .into_iter()
+        .map(|(id, song)| ResponseSong {
+            id,
+            name: song.song,
+            artist_id: song.artist_hash,
+            artist_name: song.artist,
+        })
+        .collect();
+
+    songs.sort_by_key(|song| song.name.clone());
+
     let response = Response {
         status: "ok",
         data: Some(DataType::Song(songs)),
@@ -86,6 +113,17 @@ fn artists(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
 
 fn api_artists(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
     let artists = collection.get_ref().by_artist.clone();
+    let mut artists: Vec<ResponseArtist> = artists
+        .into_iter()
+        .map(|(id, artist)| ResponseArtist {
+            id,
+            name: artist.name,
+            num_songs: artist.num_songs,
+        })
+        .collect();
+
+    artists.sort_by_key(|artist| artist.name.clone());
+
     let response = Response {
         status: "ok",
         data: Some(DataType::Artist(artists)),
