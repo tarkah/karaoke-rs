@@ -4,7 +4,7 @@ use karaoke::CONFIG;
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use rustbreak::{deser::Yaml, FileDatabase};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     default::Default,

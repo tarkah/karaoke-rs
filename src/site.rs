@@ -6,7 +6,7 @@ use karaoke::{
     queue::PLAY_QUEUE,
     CONFIG,
 };
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -25,12 +25,12 @@ struct Queue {
     queue: Vec<Kfile>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 struct JsonStatus {
     status: &'static str,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 struct ResponseSong {
     id: u64,
     name: String,
@@ -38,14 +38,14 @@ struct ResponseSong {
     artist_name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 struct ResponseArtist {
     id: u64,
     name: String,
     num_songs: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 struct Response {
     status: &'static str,
     data: Option<DataType>,
@@ -53,12 +53,19 @@ struct Response {
     total_pages: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 enum DataType {
     #[serde(rename = "songs")]
     Song(Vec<ResponseSong>),
     #[serde(rename = "artists")]
     Artist(Vec<ResponseArtist>),
+}
+
+#[derive(Deserialize)]
+struct SongParams {
+    page: Option<u32>,
+    query: Option<String>,
+    artist_id: Option<u64>,
 }
 
 fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
@@ -77,7 +84,10 @@ fn songs(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().content_type("text/html").body(html))
 }
 
-fn api_songs(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
+fn api_songs(
+    collection: web::Data<Collection>,
+    params: web::Query<SongParams>,
+) -> Result<web::Json<Response>, Error> {
     let songs = collection.get_ref().by_song.clone();
     let mut songs: Vec<ResponseSong> = songs
         .into_iter()
@@ -91,16 +101,21 @@ fn api_songs(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
 
     songs.sort_by_key(|song| song.name.clone());
 
+    if let Some(artist_id) = params.artist_id {
+        songs = songs
+            .into_iter()
+            .filter(|song| song.artist_id == artist_id)
+            .collect();
+    }
+
     let response = Response {
         status: "ok",
         data: Some(DataType::Song(songs)),
         page: 1,
         total_pages: 1,
     };
-    let body = serde_json::to_string(&response)?;
-    Ok(HttpResponse::Ok()
-        .content_type("application/json")
-        .body(&body))
+
+    Ok(web::Json(response))
 }
 
 fn artists(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
@@ -111,7 +126,7 @@ fn artists(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().content_type("text/html").body(html))
 }
 
-fn api_artists(collection: web::Data<Collection>) -> Result<HttpResponse, Error> {
+fn api_artists(collection: web::Data<Collection>) -> Result<web::Json<Response>, Error> {
     let artists = collection.get_ref().by_artist.clone();
     let mut artists: Vec<ResponseArtist> = artists
         .into_iter()
@@ -130,10 +145,7 @@ fn api_artists(collection: web::Data<Collection>) -> Result<HttpResponse, Error>
         page: 1,
         total_pages: 1,
     };
-    let body = serde_json::to_string(&response)?;
-    Ok(HttpResponse::Ok()
-        .content_type("application/json")
-        .body(&body))
+    Ok(web::Json(response))
 }
 
 fn artist(

@@ -3,7 +3,7 @@ extern crate config as cfg;
 use dirs::{config_dir, data_dir};
 use karaoke::embed::create_config_if_not_exists;
 use lazy_static::lazy_static;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
 
 //Default locations, overriden if supplied in Config file or by Argument
