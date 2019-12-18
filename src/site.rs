@@ -112,7 +112,7 @@ fn api_songs(
         })
         .collect();
 
-    songs.sort_by_key(|song| song.name.clone());
+    songs.sort_by_key(|song| song.name.to_lowercase());
 
     if let Some(artist_id) = params.artist_id {
         songs = songs
@@ -175,7 +175,7 @@ fn api_artists(
         })
         .collect();
 
-    artists.sort_by_key(|artist| artist.name.clone());
+    artists.sort_by_key(|artist| artist.name.to_lowercase());
 
     let page = params.page.unwrap_or(1);
     let artist_count = artists.len();
