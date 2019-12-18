@@ -15,6 +15,8 @@ use std::{
 };
 use tera::Context;
 
+const PAGE_SIZE: usize = 100;
+
 #[derive(Deserialize)]
 struct Song {
     hash: u64,
@@ -30,7 +32,7 @@ struct JsonStatus {
     status: &'static str,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct ResponseSong {
     id: u64,
     name: String,
@@ -38,7 +40,7 @@ struct ResponseSong {
     artist_name: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct ResponseArtist {
     id: u64,
     name: String,
@@ -48,9 +50,14 @@ struct ResponseArtist {
 #[derive(Serialize)]
 struct Response {
     status: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<DataType>,
-    page: u32,
-    total_pages: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    page: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    total_pages: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error_message: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -66,6 +73,12 @@ struct SongParams {
     page: Option<u32>,
     query: Option<String>,
     artist_id: Option<u64>,
+}
+
+#[derive(Deserialize)]
+struct ArtistParams {
+    page: Option<u32>,
+    query: Option<String>,
 }
 
 fn index(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
@@ -108,11 +121,33 @@ fn api_songs(
             .collect();
     }
 
+    let page = params.page.unwrap_or(1);
+    let song_count = songs.len();
+    let pages = (song_count as f32 / PAGE_SIZE as f32).ceil() as u32;
+
+    if page == 0 || page > pages {
+        let response = Response {
+            status: "error",
+            error_message: Some("Incorrect page number".to_string()),
+            data: None,
+            page: None,
+            total_pages: None,
+        };
+        return Ok(web::Json(response));
+    }
+
+    songs = songs
+        .chunks(PAGE_SIZE)
+        .nth((page - 1) as usize)
+        .unwrap()
+        .to_vec();
+
     let response = Response {
         status: "ok",
+        error_message: None,
         data: Some(DataType::Song(songs)),
-        page: 1,
-        total_pages: 1,
+        page: Some(page),
+        total_pages: Some(pages),
     };
 
     Ok(web::Json(response))
@@ -126,7 +161,10 @@ fn artists(tera: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().content_type("text/html").body(html))
 }
 
-fn api_artists(collection: web::Data<Collection>) -> Result<web::Json<Response>, Error> {
+fn api_artists(
+    collection: web::Data<Collection>,
+    params: web::Query<ArtistParams>,
+) -> Result<web::Json<Response>, Error> {
     let artists = collection.get_ref().by_artist.clone();
     let mut artists: Vec<ResponseArtist> = artists
         .into_iter()
@@ -139,12 +177,35 @@ fn api_artists(collection: web::Data<Collection>) -> Result<web::Json<Response>,
 
     artists.sort_by_key(|artist| artist.name.clone());
 
+    let page = params.page.unwrap_or(1);
+    let artist_count = artists.len();
+    let pages = (artist_count as f32 / PAGE_SIZE as f32).ceil() as u32;
+
+    if page == 0 || page > pages {
+        let response = Response {
+            status: "error",
+            error_message: Some("Incorrect page number".to_string()),
+            data: None,
+            page: None,
+            total_pages: None,
+        };
+        return Ok(web::Json(response));
+    }
+
+    artists = artists
+        .chunks(PAGE_SIZE)
+        .nth((page - 1) as usize)
+        .unwrap()
+        .to_vec();
+
     let response = Response {
         status: "ok",
+        error_message: None,
         data: Some(DataType::Artist(artists)),
-        page: 1,
-        total_pages: 1,
+        page: Some(page),
+        total_pages: Some(pages),
     };
+
     Ok(web::Json(response))
 }
 
