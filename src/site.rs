@@ -138,7 +138,7 @@ fn api_songs(
     let song_count = songs.len();
     let pages = (song_count as f32 / PAGE_SIZE as f32).ceil() as u32;
 
-    if page == 0 || page > pages {
+    if page == 0 || (page > pages && pages > 0) {
         let response = Response {
             status: "error",
             error_message: Some("Incorrect page number".to_string()),
@@ -152,7 +152,7 @@ fn api_songs(
     songs = songs
         .chunks(PAGE_SIZE)
         .nth((page - 1) as usize)
-        .unwrap()
+        .unwrap_or(&[])
         .to_vec();
 
     let response = Response {
@@ -201,7 +201,7 @@ fn api_artists(
     let artist_count = artists.len();
     let pages = (artist_count as f32 / PAGE_SIZE as f32).ceil() as u32;
 
-    if page == 0 || page > pages {
+    if page == 0 || (page > pages && pages > 0) {
         let response = Response {
             status: "error",
             error_message: Some("Incorrect page number".to_string()),
@@ -215,7 +215,7 @@ fn api_artists(
     artists = artists
         .chunks(PAGE_SIZE)
         .nth((page - 1) as usize)
-        .unwrap()
+        .unwrap_or(&[])
         .to_vec();
 
     let response = Response {
