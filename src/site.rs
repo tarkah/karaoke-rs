@@ -121,6 +121,19 @@ fn api_songs(
             .collect();
     }
 
+    if let Some(query) = &params.query {
+        songs = songs
+            .into_iter()
+            .filter(|song| {
+                song.name.to_lowercase().contains(&query.to_lowercase())
+                    || song
+                        .artist_name
+                        .to_lowercase()
+                        .contains(&query.to_lowercase())
+            })
+            .collect();
+    }
+
     let page = params.page.unwrap_or(1);
     let song_count = songs.len();
     let pages = (song_count as f32 / PAGE_SIZE as f32).ceil() as u32;
@@ -176,6 +189,13 @@ fn api_artists(
         .collect();
 
     artists.sort_by_key(|artist| artist.name.to_lowercase());
+
+    if let Some(query) = &params.query {
+        artists = artists
+            .into_iter()
+            .filter(|artist| artist.name.to_lowercase().contains(&query.to_lowercase()))
+            .collect();
+    }
 
     let page = params.page.unwrap_or(1);
     let artist_count = artists.len();
