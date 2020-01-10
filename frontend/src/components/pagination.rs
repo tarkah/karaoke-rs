@@ -58,14 +58,10 @@ impl Component for Pagination {
     }
 
     fn view(&self) -> Html {
-        let total_pages = self.total_pages;
-        let current_page = self.current_page;
-
         html! {
-            <ul class="pagination">
-                <li class={ if current_page==1 {"page-item disabled"} else {"page-item"} }>
-                    <a class="page-link" href="#" onclick=self.link.callback(|_| Msg::TablePageDown)>{ "«" }</a>
-                </li>
+            <div class="table-paging">
+                <button class="table-paging__btn" onclick=self.link.callback(|_| Msg::TablePageDown)
+                    disabled={ self.current_page==1 }>{ "«" }</button>
                 { self.view_pagination_button_first() }
                 { self.view_pagination_buttons_first() }
                 { self.view_pagination_delimiter_first() }
@@ -73,10 +69,9 @@ impl Component for Pagination {
                 { self.view_pagination_delimiter_last() }
                 { self.view_pagination_buttons_last() }
                 { self.view_pagination_button_last() }
-                <li class={ if current_page==total_pages || total_pages==0 {"page-item disabled"} else {"page-item"} }>
-                    <a class="page-link" href="#" onclick=self.link.callback(|_| Msg::TablePageUp)>{ "»" }</a>
-                </li>
-            </ul>
+                <button class="table-paging__btn" onclick=self.link.callback(|_| Msg::TablePageUp)
+                    disabled={ self.current_page==self.total_pages }>{ "»" }</button>
+            </div>
         }
     }
 }
@@ -86,17 +81,16 @@ impl Pagination {
         let current_page = self.current_page;
 
         if current_page == page {
-            "page-item active"
+            "table-paging__btn--active"
         } else {
-            "page-item"
+            "table-paging__btn"
         }
     }
 
     fn view_pagination_button(&self, page: u32) -> Html {
         html! {
-            <li class={ self.view_pagination_button_is_active(page) }>
-                <a class="page-link" href="#" onclick=self.link.callback(move |_| Msg::TablePageChange(page))>{ page }</a>
-            </li>
+            <button class={ self.view_pagination_button_is_active(page) }
+                onclick=self.link.callback(move |_| Msg::TablePageChange(page))>{ page }</button>
         }
     }
 
@@ -110,7 +104,7 @@ impl Pagination {
 
         if total_pages > 5 && current_page > 3 {
             html! {
-                <li class="page-item disabled"><a class="page-link" href="#">{ "..." }</a></li>
+                <button class="table-paging__btn">{ "..." }</button>
             }
         } else {
             html! {}
@@ -123,7 +117,7 @@ impl Pagination {
 
         if total_pages > 5 && total_pages - current_page > 2 {
             html! {
-                <li class="page-item disabled"><a class="page-link" href="#">{ "..." }</a></li>
+                <button class="table-paging__btn">{ "..." }</button>
             }
         } else {
             html! {}

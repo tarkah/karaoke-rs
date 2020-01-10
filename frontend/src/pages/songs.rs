@@ -129,17 +129,15 @@ impl SongsPage {
         html! {
             <tr>
                 <td>{ song.name }</td>
-                <td class="text-center">
-                    <a href=format!("/artist/{}", song.artist_id)>
-                    <RouterAnchor<AppRoute> route=AppRoute::Artist(song.artist_id)>{ song.artist_name }</ RouterAnchor<AppRoute>>
-                    </a>
+                <td>
+                    <RouterAnchor<AppRoute> route=AppRoute::Artist(song.artist_id) classes="artist-link">{ song.artist_name }</ RouterAnchor<AppRoute>>
                 </td>
-                <td class="text-center">
-                    <button onclick=self.link.callback(move |_| Msg::Add(song_id)) class="btn btn-secondary btn-sm active"
+                <td>
+                    <button onclick=self.link.callback(move |_| Msg::Add(song_id)) class="button"
                         role="button" aria-pressed="true">{ "Add" }</button>
                 </td>
-                <td class="text-center">
-                    <button onclick=self.link.callback(move |_| Msg::PlayNow(song_id)) class="btn btn-primary btn-sm active"
+                <td>
+                    <button onclick=self.link.callback(move |_| Msg::PlayNow(song_id)) class="button"
                         role="button" aria-pressed="true">{ "Play" }</button>
                 </td>
             </tr>
@@ -149,18 +147,17 @@ impl SongsPage {
         if self.songs_fetched {
             html! {
                 <div>
-                    <div style="width: 50%; margin-bottom: 16px;">
-                        <input class="form-control" type="text" placeholder="Search"
+                    <div>
+                        <input class="input" type="text" placeholder="Search"
                             oninput=self.link.callback(|input: InputData| Msg::Search(input.value))></input>
                     </div>
-                    <div class="justify-content-center">
-                        <table class="table table-striped table-bordered">
+                    <div>
+                        <table class="table">
                             <thead>
                                 <tr>
-                                    <th scope="col">{ "Song" }</th>
-                                    <th scope="col" class="text-center">{ "Artist" }</th>
-                                    <th scope="col"></th>
-                                    <th scope="col"></th>
+                                    <th>{ "Song" }</th>
+                                    <th>{ "Artist" }</th>
+                                    <th width=250></th>
                                 </tr>
                             </thead>
                             <tbody>

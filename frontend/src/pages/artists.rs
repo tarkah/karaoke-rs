@@ -122,11 +122,9 @@ impl ArtistsPage {
         html! {
             <tr>
                 <td>
-                    <a href=format!("/artist/{}", artist.id)>
-                    <RouterAnchor<AppRoute> route=AppRoute::Artist(artist.id)>{ artist.name }</RouterAnchor<AppRoute>>
-                    </a>
+                    <RouterAnchor<AppRoute> route=AppRoute::Artist(artist.id) classes="artist-link">{ artist.name }</RouterAnchor<AppRoute>>
                 </td>
-                <td class="text-center">{ artist.num_songs }</td>
+                <td>{ artist.num_songs }</td>
             </tr>
         }
     }
@@ -135,16 +133,16 @@ impl ArtistsPage {
         if self.artists_fetched {
             html! {
                 <div>
-                    <div style="width: 50%; margin-bottom: 16px;">
-                        <input class="form-control" type="text" placeholder="Search"
+                    <div>
+                        <input class="input" type="text" placeholder="Search"
                             oninput=self.link.callback(|input: InputData| Msg::Search(input.value))></input>
                     </div>
-                    <div class="justify-content-center">
-                        <table class="table table-striped table-bordered">
+                    <div>
+                        <table class="table">
                             <thead>
                                 <tr>
-                                    <th scope="col">{ "Artist" }</th>
-                                    <th scope="col" class="text-center">{ "# Songs" }</th>
+                                    <th>{ "Artist" }</th>
+                                    <th>{ "# Songs" }</th>
                                 </tr>
                             </thead>
                             <tbody>

@@ -16,7 +16,7 @@ impl Component for IndexPage {
 
     fn view(&self) -> Html {
         html! {
-            <div class="mt-2">
+            <div>
                 <h3>{ "Welcome to this simple karaoke site!" }</h3>
                 <p>{ "Add songs to the queue or play now to skip to the front." }</p>
             </div>

@@ -1,5 +1,6 @@
 use crate::pages::*;
 
+use log::trace;
 use yew::prelude::*;
 use yew_router::{prelude::*, switch::Permissive, Switch};
 
@@ -19,25 +20,47 @@ pub enum AppRoute {
     NotFound(Permissive<String>),
 }
 
-pub struct Model {}
+#[allow(dead_code)]
+pub struct Model {
+    link: ComponentLink<Self>,
+    router_agent: Box<dyn Bridge<RouteAgent>>,
+    current_route: Option<String>,
+}
+
+pub enum Msg {
+    UpdateHeader(String),
+}
 
 impl Component for Model {
-    type Message = ();
+    type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Model {}
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let callback = link.callback(|route: Route| Msg::UpdateHeader(route.route));
+        let router_agent = RouteAgent::bridge(callback);
+
+        Model {
+            link,
+            router_agent,
+            current_route: None,
+        }
     }
 
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
-        false
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::UpdateHeader(route) => {
+                self.current_route = Some(route);
+            }
+        }
+        true
     }
 
     fn view(&self) -> Html {
         html! {
             <div>
+                <div id="toast-container"></div>
                 { self.view_header() }
-                <main class="container" role="main" style="padding-top: 100px">
+                <main class="content" role="main">
                     { self.view_page() }
                 </main>
             </div>
@@ -47,52 +70,27 @@ impl Component for Model {
 
 impl Model {
     fn view_header(&self) -> Html {
+        let current_route = self.current_route.clone().unwrap_or_else(|| "/".into());
+
+        trace!("Current route is: {}", current_route);
+
         html! {
-            <div class="container fixed-top bg-white align-items-center border-bottom pt-2 pb-1">
-                <div class="column">
-                    <div class="row align-items-center">
-                        <h2>{ "Karaoke-rs" }</h2>
-                    </div>
-                    <div class="row align-items-center">
-                        <span>
-                            <h5>
-                                <a href="/">
-                                <RouterAnchor<AppRoute> route=AppRoute::Index>{ "Home" }</RouterAnchor<AppRoute>>
-                                </a>
-                            </h5>
-                        </span>
-                        <span>
-                            <h5>{ "\u{00a0}|\u{00a0}" }</h5>
-                        </span>
-                        <span>
-                            <h5>
-                                <a href="/songs">
-                                <RouterAnchor<AppRoute> route=AppRoute::Songs>{ "Songs" }</RouterAnchor<AppRoute>>
-                                </a>
-                            </h5>
-                        </span>
-                        <span>
-                            <h5>{ "\u{00a0}|\u{00a0}" }</h5>
-                        </span>
-                        <span>
-                            <h5>
-                                <a href="/artists">
-                                <RouterAnchor<AppRoute> route=AppRoute::Artists>{ "Artists" }</RouterAnchor<AppRoute>>
-                                </a>
-                            </h5>
-                        </span>
-                        <span>
-                            <h5>{ "\u{00a0}|\u{00a0}" }</h5>
-                        </span>
-                        <span>
-                            <h5>
-                                <a href="/queue">
-                                <RouterAnchor<AppRoute> route=AppRoute::Queue>{ "Queue" }</RouterAnchor<AppRoute>>
-                                </a>
-                            </h5>
-                        </span>
-                    </div>
-                </div>
+            <div class="header">
+                <img src="/static/logo.png" class="header__logo" width="64" />
+                <nav class="header__navigation">
+                    <RouterAnchor<AppRoute> route=AppRoute::Index
+                        classes={ if current_route=="/" { "header__navigation-item--active" } else { "header__navigation-item" }}>
+                            { "Home" }</RouterAnchor<AppRoute>>
+                    <RouterAnchor<AppRoute> route=AppRoute::Songs
+                        classes={ if current_route=="/songs" { "header__navigation-item--active" } else { "header__navigation-item" }}>
+                            { "Songs" }</RouterAnchor<AppRoute>>
+                    <RouterAnchor<AppRoute> route=AppRoute::Artists
+                        classes={ if current_route=="/artists" { "header__navigation-item--active" } else { "header__navigation-item" }}>
+                            { "Artists" }</RouterAnchor<AppRoute>>
+                    <RouterAnchor<AppRoute> route=AppRoute::Queue
+                        classes={ if current_route=="/queue" { "header__navigation-item--active" } else { "header__navigation-item" }}>
+                            { "Queue" }</RouterAnchor<AppRoute>>
+                </nav>
             </div>
         }
     }
@@ -100,10 +98,10 @@ impl Model {
     fn view_page(&self) -> Html {
         html! {
             <Router<AppRoute, ()>
-                render = Router::render(|switch: AppRoute| {
+                render = Router::render(move |switch: AppRoute| {
                     match switch {
                         AppRoute::Index => html!{<IndexPage />},
-                        AppRoute::Songs => html!{<SongsPage />},
+                        AppRoute::Songs => html! {<SongsPage />},
                         AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
                         AppRoute::Artists => html!{<ArtistsPage />},
                         AppRoute::Queue => html!{<QueuePage />},

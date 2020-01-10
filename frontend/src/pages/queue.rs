@@ -85,19 +85,13 @@ impl Component for QueuePage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <div class="row text-center mt-1 mb-3">
-                    <div class="col">
-                        <button class="btn btn-secondary btn-sm active btn-block"
-                            role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Clear)>{ "Clear Queue" }</button>
-                    </div>
-                    <div class="col">
-                        <button class="btn btn-primary btn-sm active btn-block"
-                            role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Next)>{ "Next Song" }</button>
-                    </div>
-                    <div class="col">
-                        <button class="btn btn-warning btn-sm active btn-block"
-                            role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Stop)>{ "Stop" }</button>
-                    </div>
+                <div class="queue__actions">
+                    <button class="button"
+                        role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Clear)>{ "Clear Queue" }</button>
+                    <button class="button"
+                        role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Next)>{ "Next Song" }</button>
+                    <button class="button"
+                        role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Stop)>{ "Stop" }</button>
                 </div>
                 { self.view_table() }
             </div>
