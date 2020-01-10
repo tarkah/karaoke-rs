@@ -1,0 +1,22 @@
+[package]
+name = "karaoke-rs"
+authors = ["tarkah <admin@tarkah.dev>"]
+edition = "2018"
+license = "MIT"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+yew = "0.10"
+yew-router = "0.7" # { git="https://github.com/yewstack/yew_router", rev= "46473c5d843e7ebe651db5c7daab9f86da84f359" }
+
+log = "0.4"
+web_logger = "0.2"
+failure = "0.1"
+serde = { version = "1", features = ['derive'] }
+serde_urlencoded = "0.5"
+
+wee_alloc = "0.4"
+wasm-bindgen = "0.2"
