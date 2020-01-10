@@ -1,7 +1,7 @@
 use crate::pages::*;
 
 use yew::prelude::*;
-use yew_router::{prelude::*, Switch};
+use yew_router::{prelude::*, switch::Permissive, Switch};
 
 #[derive(Debug, Switch, Clone)]
 pub enum AppRoute {
@@ -16,7 +16,7 @@ pub enum AppRoute {
     #[to = "/queue"]
     Queue,
     #[to = "/page-not-found"]
-    NotFound(Option<String>),
+    NotFound(Permissive<String>),
 }
 
 pub struct Model {}
@@ -33,7 +33,7 @@ impl Component for Model {
         false
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div>
                 { self.view_header() }
@@ -46,7 +46,7 @@ impl Component for Model {
 }
 
 impl Model {
-    fn view_header(&self) -> Html<Self> {
+    fn view_header(&self) -> Html {
         html! {
             <div class="container fixed-top bg-white align-items-center border-bottom pt-2 pb-1">
                 <div class="column">
@@ -56,7 +56,9 @@ impl Model {
                     <div class="row align-items-center">
                         <span>
                             <h5>
-                                <RouterLink text=String::from("Home"), link="/", />
+                                <a href="/">
+                                <RouterAnchor<AppRoute> route=AppRoute::Index>{ "Home" }</RouterAnchor<AppRoute>>
+                                </a>
                             </h5>
                         </span>
                         <span>
@@ -64,7 +66,9 @@ impl Model {
                         </span>
                         <span>
                             <h5>
-                                <RouterLink text=String::from("Songs"), link="/songs", />
+                                <a href="/songs">
+                                <RouterAnchor<AppRoute> route=AppRoute::Songs>{ "Songs" }</RouterAnchor<AppRoute>>
+                                </a>
                             </h5>
                         </span>
                         <span>
@@ -72,7 +76,9 @@ impl Model {
                         </span>
                         <span>
                             <h5>
-                                <RouterLink text=String::from("Artists"), link="/artists", />
+                                <a href="/artists">
+                                <RouterAnchor<AppRoute> route=AppRoute::Artists>{ "Artists" }</RouterAnchor<AppRoute>>
+                                </a>
                             </h5>
                         </span>
                         <span>
@@ -80,7 +86,9 @@ impl Model {
                         </span>
                         <span>
                             <h5>
-                                <RouterLink text=String::from("Queue"), link="/queue", />
+                                <a href="/queue">
+                                <RouterAnchor<AppRoute> route=AppRoute::Queue>{ "Queue" }</RouterAnchor<AppRoute>>
+                                </a>
                             </h5>
                         </span>
                     </div>
@@ -89,7 +97,7 @@ impl Model {
         }
     }
 
-    fn view_page(&self) -> Html<Self> {
+    fn view_page(&self) -> Html {
         html! {
             <Router<AppRoute, ()>
                 render = Router::render(|switch: AppRoute| {
@@ -99,13 +107,13 @@ impl Model {
                         AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
                         AppRoute::Artists => html!{<ArtistsPage />},
                         AppRoute::Queue => html!{<QueuePage />},
-                        AppRoute::NotFound(None) => html!{"Page not found"},
-                        AppRoute::NotFound(Some(missed_route)) => html!{format!("Page '{}' not found", missed_route)},
+                        AppRoute::NotFound(Permissive(None)) => html!{"Page not found"},
+                        AppRoute::NotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)},
                         _ => html!{"Page not found"},
                     }
                 })
                 redirect = Router::redirect(|route: Route| {
-                    AppRoute::NotFound(Some(route.route))
+                    AppRoute::NotFound(Permissive(Some(route.route)))
                 })
             />
         }

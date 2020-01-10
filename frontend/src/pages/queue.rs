@@ -33,8 +33,8 @@ impl Component for QueuePage {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let callback = link.send_back(|_| Msg::FetchQueue);
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let callback = link.callback(|_| Msg::FetchQueue);
         let mut interval = IntervalService::new();
         let handle = interval.spawn(Duration::from_millis(1000), callback);
 
@@ -48,7 +48,7 @@ impl Component for QueuePage {
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        self.link.send_self(Msg::FetchQueue);
+        self.link.send_message(Msg::FetchQueue);
         false
     }
 
@@ -75,29 +75,28 @@ impl Component for QueuePage {
             }
             Msg::StoreQueue(queue) => {
                 self.queue = queue;
+                return true;
             }
-            Msg::Noop => {
-                return false;
-            }
+            Msg::Noop => {}
         }
-        true
+        false
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div>
                 <div class="row text-center mt-1 mb-3">
                     <div class="col">
                         <button class="btn btn-secondary btn-sm active btn-block"
-                            role="button" aria-pressed="true" onclick=|_| Msg::Clear>{ "Clear Queue" }</button>
+                            role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Clear)>{ "Clear Queue" }</button>
                     </div>
                     <div class="col">
                         <button class="btn btn-primary btn-sm active btn-block"
-                            role="button" aria-pressed="true" onclick=|_| Msg::Next>{ "Next Song" }</button>
+                            role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Next)>{ "Next Song" }</button>
                     </div>
                     <div class="col">
                         <button class="btn btn-warning btn-sm active btn-block"
-                            role="button" aria-pressed="true" onclick=|_| Msg::Stop>{ "Stop" }</button>
+                            role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Stop)>{ "Stop" }</button>
                     </div>
                 </div>
                 { self.view_table() }
@@ -107,7 +106,7 @@ impl Component for QueuePage {
 }
 
 impl QueuePage {
-    fn view_row(&self, idx: usize, song: Song) -> Html<Self> {
+    fn view_row(&self, idx: usize, song: Song) -> Html {
         html! {
             <tr>
                 <th scope="row" class="text-center">{ idx + 1 }</th>
@@ -117,7 +116,7 @@ impl QueuePage {
         }
     }
 
-    fn view_table(&self) -> Html<Self> {
+    fn view_table(&self) -> Html {
         html! {
             <div>
                 <div class="justify-content-center">
@@ -143,7 +142,7 @@ impl QueuePage {
     }
 
     fn fetch_queue(&mut self) -> FetchTask {
-        let callback = self.link.send_back(
+        let callback = self.link.callback(
             move |response: Response<Json<Result<ApiResponse, Error>>>| {
                 let Json(body) = response.into_body();
 
@@ -171,7 +170,7 @@ impl QueuePage {
     fn send_command(&mut self, command: &str) -> FetchTask {
         trace!("Sending command to API: {}", command);
 
-        let callback = self.link.send_back(
+        let callback = self.link.callback(
             move |response: Response<Json<Result<ApiResponse, Error>>>| {
                 let (meta, _) = response.into_parts();
 

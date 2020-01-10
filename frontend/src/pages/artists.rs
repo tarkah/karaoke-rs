@@ -1,4 +1,5 @@
 use crate::{
+    app::AppRoute,
     components::pagination::Pagination,
     model::{ApiResponse, Artist, DataType, RequestParams},
 };
@@ -54,7 +55,7 @@ impl Component for ArtistsPage {
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        self.link.send_self(Msg::FetchArtists);
+        self.link.send_message(Msg::FetchArtists);
         false
     }
 
@@ -71,25 +72,24 @@ impl Component for ArtistsPage {
                 self.artists = artists;
                 self.total_pages = Some(total_pages);
                 self.artists_fetched = true;
+                return true;
             }
             Msg::TablePageUpdate(n) => {
                 self.page_selection = Some(n);
-                self.link.send_self(Msg::FetchArtists);
+                self.update(Msg::FetchArtists);
             }
             Msg::Search(value) => {
                 trace!("Search Input: {}", value);
                 self.search = Some(value);
                 self.page_selection = None;
-                self.link.send_self(Msg::FetchArtists);
+                self.update(Msg::FetchArtists);
             }
-            Msg::Noop => {
-                return false;
-            }
+            Msg::Noop => {}
         }
-        true
+        false
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div>
                 { self.view_table() }
@@ -118,25 +118,26 @@ impl ArtistsPage {
             None
         }
     }
-    fn view_row(&self, artist: Artist) -> Html<Self> {
+    fn view_row(&self, artist: Artist) -> Html {
         html! {
             <tr>
                 <td>
-                    <RouterLink text={ artist.name }, link=format!("/artist/{}", artist.id), />
+                    <a href=format!("/artist/{}", artist.id)>
+                    <RouterAnchor<AppRoute> route=AppRoute::Artist(artist.id)>{ artist.name }</RouterAnchor<AppRoute>>
+                    </a>
                 </td>
                 <td class="text-center">{ artist.num_songs }</td>
             </tr>
         }
     }
 
-    fn view_table(&self) -> Html<Self> {
+    fn view_table(&self) -> Html {
         if self.artists_fetched {
             html! {
                 <div>
                     <div style="width: 50%; margin-bottom: 16px;">
-                        <input class="form-control" type="text" placeholder="Search" oninput=|input| {
-                            Msg::Search(input.value)
-                        }></input>
+                        <input class="form-control" type="text" placeholder="Search"
+                            oninput=self.link.callback(|input: InputData| Msg::Search(input.value))></input>
                     </div>
                     <div class="justify-content-center">
                         <table class="table table-striped table-bordered">
@@ -155,7 +156,7 @@ impl ArtistsPage {
                             </tbody>
                         </table>
                     </div>
-                    <Pagination onupdate=Msg::TablePageUpdate
+                    <Pagination onupdate=self.link.callback(Msg::TablePageUpdate)
                                     current_page={ self.current_page() }
                                     total_pages={ self.total_pages() }
                     />
@@ -169,7 +170,7 @@ impl ArtistsPage {
     fn fetch_artists(&mut self) -> FetchTask {
         trace!("Fetching songs from API");
 
-        let callback = self.link.send_back(
+        let callback = self.link.callback(
             move |response: Response<Json<Result<ApiResponse, Error>>>| {
                 let Json(body) = response.into_body();
 

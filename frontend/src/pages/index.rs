@@ -14,7 +14,7 @@ impl Component for IndexPage {
         false
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div class="mt-2">
                 <h3>{ "Welcome to this simple karaoke site!" }</h3>

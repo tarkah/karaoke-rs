@@ -6,7 +6,7 @@ pub enum Msg {
     TablePageDown,
 }
 
-#[derive(Properties)]
+#[derive(Properties, Clone)]
 pub struct Props {
     #[props(required)]
     pub onupdate: Callback<u32>,
@@ -15,6 +15,7 @@ pub struct Props {
 }
 
 pub struct Pagination {
+    link: ComponentLink<Self>,
     onupdate: Callback<u32>,
     total_pages: u32,
     current_page: u32,
@@ -24,8 +25,9 @@ impl Component for Pagination {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         Pagination {
+            link,
             onupdate: props.onupdate,
             total_pages: props.total_pages,
             current_page: props.current_page,
@@ -55,14 +57,14 @@ impl Component for Pagination {
         true
     }
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         let total_pages = self.total_pages;
         let current_page = self.current_page;
 
         html! {
             <ul class="pagination">
                 <li class={ if current_page==1 {"page-item disabled"} else {"page-item"} }>
-                    <a class="page-link" href="#" onclick=|_| Msg::TablePageDown>{ "«" }</a>
+                    <a class="page-link" href="#" onclick=self.link.callback(|_| Msg::TablePageDown)>{ "«" }</a>
                 </li>
                 { self.view_pagination_button_first() }
                 { self.view_pagination_buttons_first() }
@@ -72,7 +74,7 @@ impl Component for Pagination {
                 { self.view_pagination_buttons_last() }
                 { self.view_pagination_button_last() }
                 <li class={ if current_page==total_pages || total_pages==0 {"page-item disabled"} else {"page-item"} }>
-                    <a class="page-link" href="#" onclick=|_| Msg::TablePageUp>{ "»" }</a>
+                    <a class="page-link" href="#" onclick=self.link.callback(|_| Msg::TablePageUp)>{ "»" }</a>
                 </li>
             </ul>
         }
@@ -90,19 +92,19 @@ impl Pagination {
         }
     }
 
-    fn view_pagination_button(&self, page: u32) -> Html<Self> {
+    fn view_pagination_button(&self, page: u32) -> Html {
         html! {
             <li class={ self.view_pagination_button_is_active(page) }>
-                <a class="page-link" href="#" onclick=|_| Msg::TablePageChange(page)>{ page }</a>
+                <a class="page-link" href="#" onclick=self.link.callback(move |_| Msg::TablePageChange(page))>{ page }</a>
             </li>
         }
     }
 
-    fn view_pagination_button_first(&self) -> Html<Self> {
+    fn view_pagination_button_first(&self) -> Html {
         self.view_pagination_button(1)
     }
 
-    fn view_pagination_delimiter_first(&self) -> Html<Self> {
+    fn view_pagination_delimiter_first(&self) -> Html {
         let total_pages = self.total_pages;
         let current_page = self.current_page;
 
@@ -115,7 +117,7 @@ impl Pagination {
         }
     }
 
-    fn view_pagination_delimiter_last(&self) -> Html<Self> {
+    fn view_pagination_delimiter_last(&self) -> Html {
         let total_pages = self.total_pages;
         let current_page = self.current_page;
 
@@ -128,7 +130,7 @@ impl Pagination {
         }
     }
 
-    fn view_pagination_button_last(&self) -> Html<Self> {
+    fn view_pagination_button_last(&self) -> Html {
         let total_pages = self.total_pages;
 
         if total_pages > 5 {
@@ -138,7 +140,7 @@ impl Pagination {
         }
     }
 
-    fn view_pagination_button_middle(&self) -> Html<Self> {
+    fn view_pagination_button_middle(&self) -> Html {
         let total_pages = self.total_pages;
         let current_page = self.current_page;
         let total_pages_safe = if total_pages < 2 { 2 } else { total_pages };
@@ -150,7 +152,7 @@ impl Pagination {
         }
     }
 
-    fn view_pagination_buttons_first(&self) -> Html<Self> {
+    fn view_pagination_buttons_first(&self) -> Html {
         let total_pages = self.total_pages;
         let current_page = self.current_page;
 
@@ -168,7 +170,7 @@ impl Pagination {
         }
     }
 
-    fn view_pagination_buttons_last(&self) -> Html<Self> {
+    fn view_pagination_buttons_last(&self) -> Html {
         let total_pages = self.total_pages;
         let current_page = self.current_page;
         let total_pages_safe = if total_pages < 2 { 2 } else { total_pages };
