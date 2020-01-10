@@ -3,7 +3,47 @@ use crate::pages::*;
 use yew::prelude::*;
 use yew_router::{prelude::*, Switch};
 
+#[derive(Debug, Switch, Clone)]
+pub enum AppRoute {
+    #[to = "/!"]
+    Index,
+    #[to = "/songs"]
+    Songs,
+    #[to = "/artists"]
+    Artists,
+    #[to = "/artist/{artist_id}"]
+    Artist(u64),
+    #[to = "/queue"]
+    Queue,
+    #[to = "/page-not-found"]
+    NotFound(Option<String>),
+}
+
 pub struct Model {}
+
+impl Component for Model {
+    type Message = ();
+    type Properties = ();
+
+    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+        Model {}
+    }
+
+    fn update(&mut self, _: Self::Message) -> ShouldRender {
+        false
+    }
+
+    fn view(&self) -> Html<Self> {
+        html! {
+            <div>
+                { self.view_header() }
+                <main class="container" role="main" style="padding-top: 100px">
+                    { self.view_page() }
+                </main>
+            </div>
+        }
+    }
+}
 
 impl Model {
     fn view_header(&self) -> Html<Self> {
@@ -70,44 +110,4 @@ impl Model {
             />
         }
     }
-}
-
-impl Component for Model {
-    type Message = ();
-    type Properties = ();
-
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Model {}
-    }
-
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html<Self> {
-        html! {
-            <div>
-                { self.view_header() }
-                <main class="container" role="main" style="padding-top: 100px">
-                    { self.view_page() }
-                </main>
-            </div>
-        }
-    }
-}
-
-#[derive(Debug, Switch, Clone)]
-pub enum AppRoute {
-    #[to = "/!"]
-    Index,
-    #[to = "/songs"]
-    Songs,
-    #[to = "/artists"]
-    Artists,
-    #[to = "/artist/{artist_id}"]
-    Artist(u64),
-    #[to = "/queue"]
-    Queue,
-    #[to = "/page-not-found"]
-    NotFound(Option<String>),
 }
