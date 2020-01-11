@@ -76,7 +76,7 @@ impl Model {
 
         html! {
             <div class="header">
-                <img src="/static/logo.png" class="header__logo" width="64" />
+                <img src="/logo.png" class="header__logo" width="64" />
                 <nav class="header__navigation">
                     <RouterAnchor<AppRoute> route=AppRoute::Index
                         classes={ if current_route=="/" { "header__navigation-item--active" } else { "header__navigation-item" }}>
