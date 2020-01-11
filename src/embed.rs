@@ -18,22 +18,15 @@ struct Config;
 pub struct Assets;
 
 pub fn unload_files() {
-    let nested_folders = vec!["static/vendor/js", "static/vendor/css"];
-
-    for folder in nested_folders {
-        //Create static folder in data path if not already exists
-        let mut nested_path = CONFIG.data_path.clone();
-        nested_path.push(folder);
-        if !nested_path.is_dir() {
-            DirBuilder::new()
-                .recursive(true)
-                .create(nested_path.clone())
-                .unwrap();
-        }
-    }
-
+    //Create static folder in data path if not already exists
     let mut static_path = CONFIG.data_path.clone();
     static_path.push("static");
+    if !static_path.is_dir() {
+        DirBuilder::new()
+            .recursive(true)
+            .create(static_path.clone())
+            .unwrap();
+    }
 
     //Save each file into static path
     for file in Static::iter() {
