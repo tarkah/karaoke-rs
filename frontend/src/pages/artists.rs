@@ -1,35 +1,23 @@
 use crate::{
+    agents::api,
     app::AppRoute,
     components::pagination::Pagination,
-    model::{ApiResponse, Artist, DataType, RequestParams},
+    model::{Artist, RequestParams},
 };
-use failure::Error;
 use log::trace;
-use yew::{
-    format::{Json, Nothing},
-    prelude::*,
-    services::{
-        fetch::{FetchTask, Request, Response},
-        FetchService,
-    },
-};
+use yew::prelude::*;
 use yew_router::prelude::*;
 
 pub enum Msg {
-    FetchArtists,
-    StoreArtistData {
-        artists: Vec<Artist>,
-        total_pages: u32,
-    },
+    GetArtists,
     TablePageUpdate(u32),
     Search(String),
-    Noop,
+    ApiResponse(api::Response),
 }
 
 pub struct ArtistsPage {
-    fetch_service: FetchService,
-    fetch_task: Option<FetchTask>,
     link: ComponentLink<ArtistsPage>,
+    api_agent: Box<dyn Bridge<api::ApiAgent>>,
     artists: Vec<Artist>,
     artists_fetched: bool,
     search: Option<String>,
@@ -42,10 +30,11 @@ impl Component for ArtistsPage {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let api_agent = api::ApiAgent::bridge(link.callback(Msg::ApiResponse));
+
         ArtistsPage {
-            fetch_service: FetchService::new(),
-            fetch_task: None,
             link,
+            api_agent,
             artists: vec![],
             artists_fetched: false,
             search: None,
@@ -55,36 +44,42 @@ impl Component for ArtistsPage {
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        self.link.send_message(Msg::FetchArtists);
+        self.link.send_message(Msg::GetArtists);
         false
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::FetchArtists => {
-                let fetch_task = self.fetch_artists();
-                self.fetch_task = Some(fetch_task);
-            }
-            Msg::StoreArtistData {
-                artists,
-                total_pages,
-            } => {
-                self.artists = artists;
-                self.total_pages = Some(total_pages);
-                self.artists_fetched = true;
-                return true;
+            Msg::GetArtists => {
+                let params = RequestParams {
+                    page: self.page_selection,
+                    query: self.search_value(),
+                    ..RequestParams::default()
+                };
+                self.api_agent.send(api::Request::GetArtists(params));
             }
             Msg::TablePageUpdate(n) => {
                 self.page_selection = Some(n);
-                self.update(Msg::FetchArtists);
+                self.update(Msg::GetArtists);
             }
             Msg::Search(value) => {
                 trace!("Search Input: {}", value);
                 self.search = Some(value);
                 self.page_selection = None;
-                self.update(Msg::FetchArtists);
+                self.update(Msg::GetArtists);
             }
-            Msg::Noop => {}
+            Msg::ApiResponse(response) => {
+                if let api::Response::Success(api::ResponseData::Artists {
+                    artists,
+                    total_pages,
+                }) = response
+                {
+                    self.artists = artists;
+                    self.total_pages = Some(total_pages);
+                    self.artists_fetched = true;
+                    return true;
+                }
+            }
         }
         false
     }
@@ -163,45 +158,5 @@ impl ArtistsPage {
         } else {
             html! {}
         }
-    }
-
-    fn fetch_artists(&mut self) -> FetchTask {
-        trace!("Fetching songs from API");
-
-        let callback = self.link.callback(
-            move |response: Response<Json<Result<ApiResponse, Error>>>| {
-                let Json(body) = response.into_body();
-
-                if let Ok(ApiResponse::SuccessGet(data)) = body {
-                    if let DataType::Artists(artists) = data.data {
-                        Msg::StoreArtistData {
-                            artists,
-                            total_pages: data.total_pages.unwrap_or(0),
-                        }
-                    } else {
-                        trace!("API returned incorrect response data");
-                        Msg::Noop
-                    }
-                } else if let Ok(ApiResponse::Error(error)) = body {
-                    trace!("Error in API response: {:?}", error.error_message);
-                    Msg::Noop
-                } else {
-                    trace!("Error in API response");
-                    Msg::Noop
-                }
-            },
-        );
-
-        let params = RequestParams {
-            page: self.page_selection,
-            query: self.search_value(),
-            ..RequestParams::default()
-        };
-        let params: String = serde_urlencoded::to_string(&params).unwrap();
-
-        let request = Request::get(&format!("/api/artists?{}", params))
-            .body(Nothing)
-            .unwrap();
-        self.fetch_service.fetch(request, callback)
     }
 }

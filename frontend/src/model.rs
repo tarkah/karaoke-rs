@@ -36,7 +36,7 @@ pub enum DataType {
     Queue(Vec<Song>),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Song {
     pub id: u64,
     pub name: String,
@@ -44,14 +44,14 @@ pub struct Song {
     pub artist_name: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Artist {
     pub id: u64,
     pub name: String,
     pub num_songs: usize,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RequestParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<u32>,

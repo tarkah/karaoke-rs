@@ -58,7 +58,7 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div>
-                <div id="toast-container"></div>
+                <crate::components::toast_container::ToastContainer />
                 { self.view_header() }
                 <main class="content" role="main">
                     { self.view_page() }

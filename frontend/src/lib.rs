@@ -5,6 +5,7 @@ use log::{trace, Level};
 use wasm_bindgen::prelude::*;
 use web_logger::Config;
 
+mod agents;
 mod app;
 mod components;
 mod model;

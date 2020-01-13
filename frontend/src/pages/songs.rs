@@ -1,34 +1,25 @@
 use crate::{
+    agents::api,
     app::AppRoute,
     components::pagination::Pagination,
-    model::{ApiResponse, DataType, PostSong, RequestParams, Song},
+    model::{RequestParams, Song},
 };
-use failure::{format_err, Error};
 use log::trace;
-use yew::{
-    format::{Json, Nothing},
-    prelude::*,
-    services::{
-        fetch::{FetchTask, Request, Response},
-        FetchService,
-    },
-};
+use yew::prelude::*;
 use yew_router::prelude::*;
 
 pub enum Msg {
-    FetchSongs,
-    StoreSongData { songs: Vec<Song>, total_pages: u32 },
-    TablePageUpdate(u32),
-    Search(String),
+    GetSongs,
     Add(u64),
     PlayNow(u64),
-    Noop,
+    TablePageUpdate(u32),
+    Search(String),
+    ApiResponse(api::Response),
 }
 
 pub struct SongsPage {
-    fetch_service: FetchService,
-    fetch_task: Option<FetchTask>,
     link: ComponentLink<SongsPage>,
+    api_agent: Box<dyn Bridge<api::ApiAgent>>,
     songs_fetched: bool,
     songs: Vec<Song>,
     search: Option<String>,
@@ -41,10 +32,11 @@ impl Component for SongsPage {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let api_agent = api::ApiAgent::bridge(link.callback(Msg::ApiResponse));
+
         SongsPage {
-            fetch_service: FetchService::new(),
-            fetch_task: None,
             link,
+            api_agent,
             songs: vec![],
             songs_fetched: false,
             search: None,
@@ -54,41 +46,46 @@ impl Component for SongsPage {
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        self.link.send_message(Msg::FetchSongs);
+        self.link.send_message(Msg::GetSongs);
         false
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::FetchSongs => {
-                let fetch_task = self.fetch_songs();
-                self.fetch_task = Some(fetch_task);
+            Msg::GetSongs => {
+                let params = RequestParams {
+                    page: self.page_selection,
+                    query: self.search_value(),
+                    ..RequestParams::default()
+                };
+                self.api_agent.send(api::Request::GetSongs(params));
             }
-            Msg::StoreSongData { songs, total_pages } => {
-                self.songs = songs;
-                self.total_pages = Some(total_pages);
-                self.songs_fetched = true;
-                return true;
+            Msg::Add(id) => {
+                self.api_agent.send(api::Request::AddSong(id));
+            }
+            Msg::PlayNow(id) => {
+                self.api_agent.send(api::Request::PlaySong(id));
             }
             Msg::TablePageUpdate(n) => {
                 self.page_selection = Some(n);
-                self.update(Msg::FetchSongs);
+                self.update(Msg::GetSongs);
             }
             Msg::Search(value) => {
                 trace!("Search Input: {}", value);
                 self.search = Some(value);
                 self.page_selection = None;
-                self.update(Msg::FetchSongs);
+                self.update(Msg::GetSongs);
             }
-            Msg::Add(id) => {
-                let fetch_task = self.post_song(id, "add");
-                self.fetch_task = Some(fetch_task);
+            Msg::ApiResponse(response) => {
+                if let api::Response::Success(api::ResponseData::Songs { songs, total_pages }) =
+                    response
+                {
+                    self.songs = songs;
+                    self.total_pages = Some(total_pages);
+                    self.songs_fetched = true;
+                    return true;
+                }
             }
-            Msg::PlayNow(id) => {
-                let fetch_task = self.post_song(id, "playnow");
-                self.fetch_task = Some(fetch_task);
-            }
-            Msg::Noop => {}
         }
         false
     }
@@ -178,78 +175,5 @@ impl SongsPage {
         } else {
             html! {}
         }
-    }
-
-    fn fetch_songs(&mut self) -> FetchTask {
-        trace!("Fetching songs from API");
-
-        let callback = self.link.callback(
-            move |response: Response<Json<Result<ApiResponse, Error>>>| {
-                let Json(body) = response.into_body();
-
-                if let Ok(ApiResponse::SuccessGet(data)) = body {
-                    if let DataType::Songs(songs) = data.data {
-                        Msg::StoreSongData {
-                            songs,
-                            total_pages: data.total_pages.unwrap_or(0),
-                        }
-                    } else {
-                        trace!("API returned incorrect response data");
-                        Msg::Noop
-                    }
-                } else if let Ok(ApiResponse::Error(error)) = body {
-                    trace!("Error in API response: {:?}", error.error_message);
-                    Msg::Noop
-                } else {
-                    trace!("Error in API response");
-                    Msg::Noop
-                }
-            },
-        );
-
-        let params = RequestParams {
-            page: self.page_selection,
-            query: self.search_value(),
-            ..RequestParams::default()
-        };
-        let params: String = serde_urlencoded::to_string(&params).unwrap();
-
-        let request = Request::get(&format!("/api/songs?{}", params))
-            .body(Nothing)
-            .unwrap();
-        self.fetch_service.fetch(request, callback)
-    }
-
-    fn post_song(&mut self, id: u64, command: &str) -> FetchTask {
-        let callback = self.link.callback(
-            move |response: Response<Json<Result<ApiResponse, Error>>>| {
-                let Json(body) = response.into_body();
-
-                if let Ok(ApiResponse::SuccessPost(data)) = body {
-                    if data.status == "ok" {
-                        trace!("Song successfully added");
-                        Msg::Noop
-                    } else {
-                        trace!("API returned incorrect response data");
-                        Msg::Noop
-                    }
-                } else if let Ok(ApiResponse::Error(error)) = body {
-                    trace!("Error in API response: {:?}", error.error_message);
-                    Msg::Noop
-                } else {
-                    trace!("Error in API response");
-                    Msg::Noop
-                }
-            },
-        );
-
-        let body = serde_urlencoded::to_string(PostSong { hash: id })
-            .map_err(|_| format_err!("Failed to serialize data"));
-
-        let request = Request::post(&format!("/api/{}", command))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .unwrap();
-        self.fetch_service.fetch(request, callback)
     }
 }

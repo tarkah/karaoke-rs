@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 yew = "0.11"
-yew-router = "0.8.1" # { git="https://github.com/yewstack/yew_router", rev= "46473c5d843e7ebe651db5c7daab9f86da84f359" }
+yew-router = "0.8.1"
 
 log = "0.4"
 web_logger = "0.2"

@@ -1,29 +1,22 @@
-use crate::model::{ApiResponse, DataType, Song};
-use failure::Error;
+use crate::{agents::api, model::Song};
 use log::trace;
 use std::time::Duration;
 use yew::{
-    format::{Json, Nothing},
     prelude::*,
-    services::{
-        fetch::{FetchTask, Request, Response},
-        FetchService, IntervalService, Task,
-    },
+    services::{IntervalService, Task},
 };
 
 pub enum Msg {
     Clear,
     Stop,
     Next,
-    FetchQueue,
-    StoreQueue(Vec<Song>),
-    Noop,
+    GetQueue,
+    ApiResponse(api::Response),
 }
 
 pub struct QueuePage {
-    fetch_service: FetchService,
-    fetch_task: Option<FetchTask>,
     link: ComponentLink<QueuePage>,
+    api_agent: Box<dyn Bridge<api::ApiAgent>>,
     queue: Vec<Song>,
     #[allow(dead_code)]
     job: Box<dyn Task>,
@@ -34,21 +27,22 @@ impl Component for QueuePage {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let callback = link.callback(|_| Msg::FetchQueue);
+        let api_agent = api::ApiAgent::bridge(link.callback(Msg::ApiResponse));
+
+        let callback = link.callback(|_| Msg::GetQueue);
         let mut interval = IntervalService::new();
         let handle = interval.spawn(Duration::from_millis(1000), callback);
 
         QueuePage {
-            fetch_service: FetchService::new(),
-            fetch_task: None,
             link,
+            api_agent,
             queue: vec![],
             job: Box::new(handle),
         }
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        self.link.send_message(Msg::FetchQueue);
+        self.link.send_message(Msg::GetQueue);
         false
     }
 
@@ -56,28 +50,28 @@ impl Component for QueuePage {
         match msg {
             Msg::Clear => {
                 trace!("Clearing queue");
-                let fetch_task = self.send_command("clear");
-                self.fetch_task = Some(fetch_task);
+                self.api_agent.send(api::Request::ClearQueue);
+                self.update(Msg::GetQueue);
             }
             Msg::Stop => {
                 trace!("Stopping player");
-                let fetch_task = self.send_command("stop");
-                self.fetch_task = Some(fetch_task);
+                self.api_agent.send(api::Request::Stop);
+                self.update(Msg::GetQueue);
             }
             Msg::Next => {
                 trace!("Requesting next song");
-                let fetch_task = self.send_command("next");
-                self.fetch_task = Some(fetch_task);
+                self.api_agent.send(api::Request::NextSong);
+                self.update(Msg::GetQueue);
             }
-            Msg::FetchQueue => {
-                let fetch_task = self.fetch_queue();
-                self.fetch_task = Some(fetch_task);
+            Msg::GetQueue => {
+                self.api_agent.send(api::Request::GetQueue);
             }
-            Msg::StoreQueue(queue) => {
-                self.queue = queue;
-                return true;
+            Msg::ApiResponse(response) => {
+                if let api::Response::Success(api::ResponseData::Queue(queue)) = response {
+                    self.queue = queue;
+                    return true;
+                }
             }
-            Msg::Noop => {}
         }
         false
     }
@@ -133,52 +127,5 @@ impl QueuePage {
                 </div>
             </div>
         }
-    }
-
-    fn fetch_queue(&mut self) -> FetchTask {
-        let callback = self.link.callback(
-            move |response: Response<Json<Result<ApiResponse, Error>>>| {
-                let Json(body) = response.into_body();
-
-                if let Ok(ApiResponse::SuccessGet(data)) = body {
-                    if let DataType::Queue(queue) = data.data {
-                        Msg::StoreQueue(queue)
-                    } else {
-                        trace!("API returned incorrect response data");
-                        Msg::Noop
-                    }
-                } else if let Ok(ApiResponse::Error(error)) = body {
-                    trace!("Error in API response: {:?}", error.error_message);
-                    Msg::Noop
-                } else {
-                    trace!("Error in API response");
-                    Msg::Noop
-                }
-            },
-        );
-
-        let request = Request::get("/api/queue").body(Nothing).unwrap();
-        self.fetch_service.fetch(request, callback)
-    }
-
-    fn send_command(&mut self, command: &str) -> FetchTask {
-        trace!("Sending command to API: {}", command);
-
-        let callback = self.link.callback(
-            move |response: Response<Json<Result<ApiResponse, Error>>>| {
-                let (meta, _) = response.into_parts();
-
-                if !meta.status.is_success() {
-                    trace!("Error submitting command");
-                }
-
-                Msg::FetchQueue
-            },
-        );
-
-        let request = Request::post(&format!("/api/{}", command))
-            .body(Nothing)
-            .unwrap();
-        self.fetch_service.fetch(request, callback)
     }
 }
