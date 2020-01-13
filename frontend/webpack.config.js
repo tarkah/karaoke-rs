@@ -21,7 +21,7 @@ module.exports = (env, argv) => {
       webassemblyModuleFilename: "karaoke-rs.wasm",
     },
     plugins: [
-      process.env.NODE_ENV === 'production' ? new CleanWebpackPlugin() : false,
+      new CleanWebpackPlugin(),
       new CopyWebpackPlugin([
         { from: './static', to: path.resolve(__dirname, "./dist") }
       ]),
@@ -29,7 +29,7 @@ module.exports = (env, argv) => {
         crateDirectory: ".",
         extraArgs: "--no-typescript",
       })
-    ].filter(Boolean),
+    ],
     watch: argv.mode !== 'production'
   };
 };

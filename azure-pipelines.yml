@@ -8,7 +8,25 @@ variables:
   rust_test_threads: 1
 
 jobs:
+  - job: 'Frontend'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
+          echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+        displayName: Install Rust
+      - script: cargo install wasm-pack
+        displayName: Install Wasm Pack
+      - script: npm install --prefix ./frontend/ ./frontend/
+        displayName: Install Frontend Dependencies
+      - script: npm run build --prefix ./frontend/
+        displayName: Build Frontend
+      - publish: $(System.DefaultWorkingDirectory)/frontend
+        artifact: frontend
+
   - job: 'Clippy'
+    dependsOn: 'Frontend'
     condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
@@ -16,7 +34,7 @@ jobs:
           imageName: 'vs2017-win2016'
           rustup_toolchain: stable
         linux-stable:
-          imageName: 'ubuntu-16.04'
+          imageName: 'ubuntu-latest'
           rustup_toolchain: stable
 
     pool:
@@ -27,7 +45,7 @@ jobs:
           sudo apt update
           sudo apt install -y libasound2-dev libudev-dev pkg-config
         displayName: Linux Install Dependencies
-        condition: eq( variables['imageName'], 'ubuntu-16.04' )
+        condition: eq( variables['imageName'], 'ubuntu-latest' )
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
@@ -39,13 +57,25 @@ jobs:
           echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
         displayName: Windows Install Rust
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+      - download: current
+        displayName: Download frontend artifact
+        artifact: frontend
+      - task: CopyFiles@2
+        displayName: Copy frontend dist folder
+        inputs:
+          sourceFolder: '$(Pipeline.Workspace)/frontend/dist'
+          contents: '**'
+          targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
+
       - script: rustup component add clippy
         displayName: Install Clippy
       - script: cargo clippy --all
         displayName: Run Clippy
 
 
-  - job: 'Test'    
+  - job: 'Test'
+    dependsOn: 'Frontend'
     condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
@@ -54,7 +84,7 @@ jobs:
           rustup_toolchain: stable
           target: 'x86_64-pc-windows-msvc'
         linux-stable:
-          imageName: 'ubuntu-16.04'
+          imageName: 'ubuntu-latest'
           rustup_toolchain: stable
           target: 'x86_64-unknown-linux-gnu'
 
@@ -66,7 +96,7 @@ jobs:
           sudo apt update
           sudo apt install -y libasound2-dev libudev-dev pkg-config
         displayName: Linux Install Dependencies
-        condition: eq( variables['imageName'], 'ubuntu-16.04' )
+        condition: eq( variables['imageName'], 'ubuntu-latest' )
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
@@ -78,6 +108,17 @@ jobs:
           echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
         displayName: Windows Install Rust
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+      - download: current
+        displayName: Download frontend artifact
+        artifact: frontend
+      - task: CopyFiles@2
+        displayName: Copy frontend dist folder
+        inputs:
+          sourceFolder: '$(Pipeline.Workspace)/frontend/dist'
+          contents: '**'
+          targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
+
       - script: cargo build --all
         displayName: Cargo Build
       - script: cargo test --all
@@ -85,6 +126,7 @@ jobs:
 
 
   - job: 'Release'
+    dependsOn: 'Frontend'
     timeoutInMinutes: 0
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
     strategy:
@@ -95,17 +137,17 @@ jobs:
           target: 'x86_64-pc-windows-msvc'
           docker: false
         linux-stable:
-          imageName: 'ubuntu-16.04'
+          imageName: 'ubuntu-latest'
           rustup_toolchain: stable
           target: 'x86_64-unknown-linux-gnu'
           docker: false
         armv7-stable:
-          imageName: 'ubuntu-16.04'
+          imageName: 'ubuntu-latest'
           rustup_toolchain: stable
           target: 'armv7-unknown-linux-gnueabihf'
           docker: true
         aarch64-stable:
-          imageName: 'ubuntu-16.04'
+          imageName: 'ubuntu-latest'
           rustup_toolchain: stable
           target: 'aarch64-unknown-linux-gnu'
           docker: true
@@ -129,7 +171,7 @@ jobs:
           sudo apt update
           sudo apt install -y libasound2-dev libudev-dev pkg-config
         displayName: Linux Install Dependencies
-        condition: and( eq( variables['imageName'], 'ubuntu-16.04' ), eq( variables['docker'], 'false' ))
+        condition: and( eq( variables['imageName'], 'ubuntu-latest' ), eq( variables['docker'], 'false' ))
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
@@ -141,6 +183,17 @@ jobs:
           echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
         displayName: Windows Install Rust
         condition: and( eq( variables['Agent.OS'], 'Windows_NT' ), eq( variables['docker'], 'false' ))
+
+      - download: current
+        displayName: Download frontend artifact
+        artifact: frontend
+      - task: CopyFiles@2
+        displayName: Copy frontend dist folder
+        inputs:
+          sourceFolder: '$(Pipeline.Workspace)/frontend/dist'
+          contents: '**'
+          targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
+
       - script: cargo build --release --all
         displayName: Cargo Build
         condition: eq( variables['docker'], 'false' )
