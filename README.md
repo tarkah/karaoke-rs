@@ -20,18 +20,32 @@ Your karaoke collection can be browsed and queued to the player from a self serv
 
 # Setup
 ### Linux
-- Download latest release binary or compile from source -- `cargo build --release`
+- Download latest release binary or build from source
 - Run `karaoke-rs --help` to see all arguments
 - Place your song collection at `~/.local/share/karaoke-rs/songs`, or specify location via `--songs path/to/song/directory`
 - Default configuration file is created at `~/.config/karaoke-rs/config.yaml`. This can be copied / changed and specified via `--config path/to/config.yaml`
 - You may need to force disable vsync to eliminate flickering, set environment variable `vblank_mode=0`
 
 ### Windows
-- Download latest release binary or compile from source -- `cargo build --release`
+- Download latest release binary or build from source
 - Double click `karaoke-rs.exe` to run with default configuration. Run from command prompt / powershell `karaoke-rs.exe --help` to see all arguments
 - Place your song collection at `%APPDATA%\karaoke-rs\songs`, or specify location via `--songs C:\path\to\song\directory`
 - Default configuration file is created at `%APPDATA%\karaoke-rs\config.yaml`. This can be copied / changed and specified via `--config C:\path\to\config.yaml`
 - Ensure all paths supplied via argument are absolute from the root of the applicable drive. Relative paths appear to cause program to crash
+
+### Build from Source
+- Build frontend
+```sh
+cd frontend
+npm install
+npm run build
+```
+- Compile
+```sh
+cd ..
+cargo build --release
+```
+- Binary located at `target/release/karaoke-rs`
 
 # TODO
 - [x] Finish setting up configuration file, allow specifying song directory and data directory (for collection db file)
