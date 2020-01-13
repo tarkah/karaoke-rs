@@ -16,14 +16,14 @@ module.exports = (env, argv) => {
     },
     entry: './bootstrap.js',
     output: {
-      path: path.resolve(__dirname, "./../embed/static"),
+      path: path.resolve(__dirname, "./dist"),
       filename: "karaoke-rs.js",
       webassemblyModuleFilename: "karaoke-rs.wasm",
     },
     plugins: [
       process.env.NODE_ENV === 'production' ? new CleanWebpackPlugin() : false,
       new CopyWebpackPlugin([
-        { from: './static', to: path.resolve(__dirname, "./../embed/static") }
+        { from: './static', to: path.resolve(__dirname, "./dist") }
       ]),
       new WasmPackPlugin({
         crateDirectory: ".",

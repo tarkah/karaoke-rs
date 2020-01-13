@@ -6,7 +6,7 @@ use std::{
 };
 
 #[derive(RustEmbed)]
-#[folder = "embed/static"]
+#[folder = "frontend/dist"]
 struct Static;
 
 #[derive(RustEmbed)]
