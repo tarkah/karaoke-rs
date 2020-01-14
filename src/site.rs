@@ -192,12 +192,13 @@ fn api_artists(
     let sort_key = params.sort_key.unwrap_or(SortKey::Artist);
     let sort_direction = params.sort_direction.unwrap_or(SortDirection::Asc);
     artists.sort_by_key(|artist| match sort_key {
-        SortKey::NumSongs => format!("{}", artist.num_songs),
+        SortKey::NumSongs => format!("{:0>5}", artist.num_songs),
         _ => artist.name.to_lowercase(),
     });
     if sort_direction == SortDirection::Desc {
         artists.reverse();
     }
+
     if let Some(query) = &params.query {
         artists = artists
             .into_iter()
