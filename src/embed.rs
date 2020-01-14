@@ -6,11 +6,7 @@ use std::{
 };
 
 #[derive(RustEmbed)]
-#[folder = "embed/templates"]
-struct Templates;
-
-#[derive(RustEmbed)]
-#[folder = "embed/static"]
+#[folder = "frontend/dist"]
 struct Static;
 
 #[derive(RustEmbed)]
@@ -22,24 +18,6 @@ struct Config;
 pub struct Assets;
 
 pub fn unload_files() {
-    //Create templates folder in data path if not already exists
-    let mut templates_path = CONFIG.data_path.clone();
-    templates_path.push("templates");
-    if !templates_path.is_dir() {
-        DirBuilder::new()
-            .recursive(true)
-            .create(templates_path.clone())
-            .unwrap();
-    }
-
-    //Save each file into static path
-    for file in Templates::iter() {
-        let file_data = Templates::get(file.as_ref()).unwrap();
-        let mut path = templates_path.clone();
-        path.push(file.as_ref());
-        write(path.as_path(), file_data.as_ref()).unwrap();
-    }
-
     //Create static folder in data path if not already exists
     let mut static_path = CONFIG.data_path.clone();
     static_path.push("static");

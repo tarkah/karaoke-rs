@@ -3,9 +3,8 @@ extern crate config as cfg;
 use dirs::{config_dir, data_dir};
 use karaoke::embed::create_config_if_not_exists;
 use lazy_static::lazy_static;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{default::Default, fs::DirBuilder, path::PathBuf};
-
 
 //Default locations, overriden if supplied in Config file or by Argument
 lazy_static! {
@@ -17,7 +16,7 @@ lazy_static! {
             .create(config_dir.clone())
             .unwrap();
 
-        let mut path = config_dir.to_path_buf();
+        let mut path = config_dir;
         path.push("config.yaml");
         path
     };
@@ -84,7 +83,7 @@ pub fn load_config(
     let config_file: PathBuf;
     match config_path {
         Some(path) => {
-            config_file = path.to_path_buf();
+            config_file = path;
         }
         None => {
             config_file = CONF_FILE.to_path_buf();
@@ -100,10 +99,10 @@ pub fn load_config(
 
     //Update config with supplied Args
     if let Some(path) = song_path {
-        config.song_path = path.to_path_buf();
+        config.song_path = path;
     }
     if let Some(path) = data_path {
-        config.data_path = path.to_path_buf();
+        config.data_path = path;
     }
     if let Some(bool) = no_collection_update {
         config.no_collection_update = bool;
@@ -142,7 +141,7 @@ mod tests {
         let song_path = PathBuf::from("test/test_data/songs");
         let data_path = PathBuf::from("test/test_data");
         let config = load_config(
-            Some(config_path.clone()),
+            Some(config_path),
             Some(song_path),
             Some(data_path),
             Some(true),

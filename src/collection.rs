@@ -4,7 +4,7 @@ use karaoke::CONFIG;
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use rustbreak::{deser::Yaml, FileDatabase};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     default::Default,
@@ -34,7 +34,7 @@ pub trait Custom {
 impl Custom for CollectionDB {
     //If file doesn't exist, create default. Load db from file.
     fn initialize(path: &PathBuf) -> Result<Box<CollectionDB>, failure::Error> {
-        let mut db: CollectionDB;
+        let db: CollectionDB;
 
         let mut db_path = path.to_path_buf();
         db_path.push("db.yaml");
@@ -288,7 +288,7 @@ fn song_parse(file_name: &str) -> Option<(&str, &str)> {
     }
 }
 
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
+pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
@@ -350,8 +350,8 @@ mod tests {
         let song_path = PathBuf::from("tests/test_data/songs");
         let data_path = PathBuf::from("tests/test_data");
         let config = Config {
-            song_path: song_path.to_path_buf(),
-            data_path: data_path.to_path_buf(),
+            song_path,
+            data_path,
             no_collection_update: false,
         };
         let initialize = CollectionDB::initialize(&config.data_path);
