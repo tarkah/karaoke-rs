@@ -1,4 +1,4 @@
-use crate::pages::*;
+use crate::{components::toast_container::ToastContainer, pages::*};
 
 use log::trace;
 use yew::prelude::*;
@@ -58,7 +58,7 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div>
-                <crate::components::toast_container::ToastContainer />
+                <ToastContainer />
                 { self.view_header() }
                 <main class="content" role="main">
                     { self.view_page() }

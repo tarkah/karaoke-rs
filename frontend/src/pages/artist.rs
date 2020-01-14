@@ -161,11 +161,11 @@ impl ArtistPage {
             <tr>
                 <td>{ song.name }</td>
                 <td>
-                    <button onclick=self.link.callback(move |_| Msg::Add(song_id)) class="button"
+                    <button onclick=self.link.callback(move |_| Msg::Add(song_id)) class="button button-table"
                         role="button" aria-pressed="true">{ "Add" }</button>
                 </td>
                 <td>
-                    <button onclick=self.link.callback(move |_| Msg::PlayNow(song_id)) class="button"
+                    <button onclick=self.link.callback(move |_| Msg::PlayNow(song_id)) class="button button-table"
                     role="button"  aria-pressed="true">{ "Play" }</button>
                 </td>
             </tr>
@@ -185,7 +185,8 @@ impl ArtistPage {
                             <thead>
                                 <tr>
                                     <th>{ "Song" }</th>
-                                    <th width="250"></th>
+                                    <th></th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>

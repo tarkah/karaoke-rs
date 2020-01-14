@@ -80,11 +80,11 @@ impl Component for QueuePage {
         html! {
             <div>
                 <div class="queue__actions">
-                    <button class="button"
+                    <button class="button button-queue-action"
                         role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Clear)>{ "Clear Queue" }</button>
-                    <button class="button"
+                    <button class="button button-queue-action"
                         role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Next)>{ "Next Song" }</button>
-                    <button class="button"
+                    <button class="button button-queue-action"
                         role="button" aria-pressed="true" onclick=self.link.callback(|_| Msg::Stop)>{ "Stop" }</button>
                 </div>
                 { self.view_table() }
@@ -97,7 +97,7 @@ impl QueuePage {
     fn view_row(&self, idx: usize, song: Song) -> Html {
         html! {
             <tr>
-                <th scope="row" class="text-center">{ idx + 1 }</th>
+                <th class="text-center">{ idx + 1 }</th>
                 <td>{ song.name }</td>
                 <td class="text-center">{ song.artist_name }</td>
             </tr>
@@ -111,9 +111,9 @@ impl QueuePage {
                     <table class="table table-striped table-bordered">
                         <thead>
                             <tr>
-                                <th scope="col" class="text-center">{ "#" }</th>
-                                <th scope="col">{ "Song" }</th>
-                                <th scope="col" class="text-center">{ "Artist" }</th>
+                                <th class="text-center">{ "#" }</th>
+                                <th>{ "Song" }</th>
+                                <th class="text-center">{ "Artist" }</th>
                             </tr>
                         </thead>
                         <tbody>
