@@ -47,12 +47,6 @@ cargo build --release
 ```
 - Binary located at `target/release/karaoke-rs`
 
-# TODO
-- [x] Finish setting up configuration file, allow specifying song directory and data directory (for collection db file)
-- [x] Allow passing config file location as argument
-- [x] Bundle website template / static files into build binary, unload them to data path on run, update Rocket to load templates / static files from that path
-- [ ] Setup proper logging and error handling
-
 
 # Screenshots
 

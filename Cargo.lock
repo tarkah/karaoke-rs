@@ -1357,7 +1357,7 @@ dependencies = [
 
 [[package]]
 name = "karaoke-rs"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "actix-files 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
