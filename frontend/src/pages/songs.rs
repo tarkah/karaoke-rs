@@ -2,7 +2,7 @@ use crate::{
     agents::api,
     app::AppRoute,
     components::pagination::Pagination,
-    model::{RequestParams, Song},
+    model::{RequestParams, Song, SortDirection, SortKey},
 };
 use log::trace;
 use yew::prelude::*;
@@ -13,6 +13,7 @@ pub enum Msg {
     Add(u64),
     PlayNow(u64),
     TablePageUpdate(u32),
+    SortUpdate(SortKey),
     Search(String),
     ApiResponse(api::Response),
 }
@@ -25,6 +26,8 @@ pub struct SongsPage {
     search: Option<String>,
     page_selection: Option<u32>,
     total_pages: Option<u32>,
+    sort_key: Option<SortKey>,
+    sort_direction: Option<SortDirection>,
 }
 
 impl Component for SongsPage {
@@ -42,6 +45,8 @@ impl Component for SongsPage {
             search: None,
             page_selection: None,
             total_pages: None,
+            sort_key: None,
+            sort_direction: None,
         }
     }
 
@@ -56,6 +61,8 @@ impl Component for SongsPage {
                 let params = RequestParams {
                     page: self.page_selection,
                     query: self.search_value(),
+                    sort_key: self.sort_key,
+                    sort_direction: self.sort_direction,
                     ..RequestParams::default()
                 };
                 self.api_agent.send(api::Request::GetSongs(params));
@@ -68,6 +75,23 @@ impl Component for SongsPage {
             }
             Msg::TablePageUpdate(n) => {
                 self.page_selection = Some(n);
+                self.update(Msg::GetSongs);
+            }
+            Msg::SortUpdate(key) => {
+                let direction = match self.sort_direction {
+                    None => SortDirection::Desc,
+                    Some(SortDirection::Asc) => SortDirection::Desc,
+                    Some(SortDirection::Desc) => SortDirection::Asc,
+                };
+                let direction = if key != self.sort_key.unwrap_or(SortKey::Song) {
+                    SortDirection::Asc
+                } else {
+                    direction
+                };
+
+                self.sort_direction = Some(direction);
+                self.sort_key = Some(key);
+
                 self.update(Msg::GetSongs);
             }
             Msg::Search(value) => {
@@ -120,6 +144,22 @@ impl SongsPage {
         }
     }
 
+    fn sort_class(&self, sort_key: SortKey) -> &str {
+        if let Some(key) = self.sort_key {
+            if key == sort_key {
+                match self.sort_direction {
+                    None => "table__sortable-header",
+                    Some(SortDirection::Asc) => "table__sortable-header--asc",
+                    Some(SortDirection::Desc) => "table__sortable-header--desc",
+                }
+            } else {
+                "table__sortable-header"
+            }
+        } else {
+            "table__sortable-header"
+        }
+    }
+
     fn view_row(&self, song: Song) -> Html {
         let song_id = song.id;
 
@@ -152,8 +192,10 @@ impl SongsPage {
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>{ "Song" }</th>
-                                    <th>{ "Artist" }</th>
+                                    <th onclick=self.link.callback(|_| Msg::SortUpdate(SortKey::Song))
+                                        class=self.sort_class(SortKey::Song)>{ "Song" }</th>
+                                    <th onclick=self.link.callback(|_| Msg::SortUpdate(SortKey::Artist))
+                                        class=self.sort_class(SortKey::Artist)>{ "Artist" }</th>
                                     <th></th>
                                     <th></th>
                                 </tr>

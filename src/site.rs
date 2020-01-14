@@ -65,22 +65,35 @@ enum DataType {
 }
 
 #[derive(Deserialize)]
-struct SongParams {
+struct Params {
     page: Option<u32>,
     query: Option<String>,
     artist_id: Option<u64>,
+    sort_key: Option<SortKey>,
+    sort_direction: Option<SortDirection>,
 }
 
-#[derive(Deserialize)]
-struct ArtistParams {
-    page: Option<u32>,
-    query: Option<String>,
-    artist_id: Option<u64>,
+#[derive(Deserialize, Clone, Copy)]
+enum SortKey {
+    #[serde(rename = "song")]
+    Song,
+    #[serde(rename = "artist")]
+    Artist,
+    #[serde(rename = "numsongs")]
+    NumSongs,
+}
+
+#[derive(Deserialize, Clone, Copy, PartialEq)]
+enum SortDirection {
+    #[serde(rename = "asc")]
+    Asc,
+    #[serde(rename = "desc")]
+    Desc,
 }
 
 fn api_songs(
     collection: web::Data<Collection>,
-    params: web::Query<SongParams>,
+    params: web::Query<Params>,
 ) -> Result<web::Json<Response>, Error> {
     let songs = collection.get_ref().by_song.clone();
     let mut songs: Vec<ResponseSong> = songs
@@ -93,7 +106,15 @@ fn api_songs(
         })
         .collect();
 
-    songs.sort_by_key(|song| song.name.to_lowercase());
+    let sort_key = params.sort_key.unwrap_or(SortKey::Song);
+    let sort_direction = params.sort_direction.unwrap_or(SortDirection::Asc);
+    songs.sort_by_key(|song| match sort_key {
+        SortKey::Artist => song.artist_name.to_lowercase(),
+        _ => song.name.to_lowercase(),
+    });
+    if sort_direction == SortDirection::Desc {
+        songs.reverse();
+    }
 
     if let Some(artist_id) = params.artist_id {
         songs = songs
@@ -149,7 +170,7 @@ fn api_songs(
 
 fn api_artists(
     collection: web::Data<Collection>,
-    params: web::Query<ArtistParams>,
+    params: web::Query<Params>,
 ) -> Result<web::Json<Response>, Error> {
     let artists = collection.get_ref().by_artist.clone();
     let mut artists: Vec<ResponseArtist> = artists
@@ -168,8 +189,15 @@ fn api_artists(
             .collect();
     }
 
-    artists.sort_by_key(|artist| artist.name.to_lowercase());
-
+    let sort_key = params.sort_key.unwrap_or(SortKey::Artist);
+    let sort_direction = params.sort_direction.unwrap_or(SortDirection::Asc);
+    artists.sort_by_key(|artist| match sort_key {
+        SortKey::NumSongs => format!("{}", artist.num_songs),
+        _ => artist.name.to_lowercase(),
+    });
+    if sort_direction == SortDirection::Desc {
+        artists.reverse();
+    }
     if let Some(query) = &params.query {
         artists = artists
             .into_iter()

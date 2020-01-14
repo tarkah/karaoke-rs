@@ -212,6 +212,16 @@ a:hover {
   transition: 0.1s ease-in-out all;
 }
 
+.table__sortable-header--asc {
+  cursor: pointer;
+  transition: 0.1s ease-in-out all;
+}
+
+.table__sortable-header--desc {
+  cursor: pointer;
+  transition: 0.1s ease-in-out all;
+}
+
 .table__sortable-header::after {
   padding: 8px;
 }

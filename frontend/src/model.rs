@@ -59,6 +59,10 @@ pub struct RequestParams {
     pub query: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_key: Option<SortKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_direction: Option<SortDirection>,
 }
 
 impl Default for RequestParams {
@@ -67,6 +71,8 @@ impl Default for RequestParams {
             page: None,
             query: None,
             artist_id: None,
+            sort_key: None,
+            sort_direction: None,
         }
     }
 }
@@ -74,4 +80,22 @@ impl Default for RequestParams {
 #[derive(Serialize, Debug, Clone)]
 pub struct PostSong {
     pub hash: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum SortKey {
+    #[serde(rename = "song")]
+    Song,
+    #[serde(rename = "artist")]
+    Artist,
+    #[serde(rename = "numsongs")]
+    NumSongs,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum SortDirection {
+    #[serde(rename = "asc")]
+    Asc,
+    #[serde(rename = "desc")]
+    Desc,
 }
