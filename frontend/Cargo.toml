@@ -1,5 +1,5 @@
 [package]
-name = "karaoke-rs"
+name = "karaoke-rs-frontend"
 authors = ["tarkah <admin@tarkah.dev>"]
 edition = "2018"
 license = "MIT"

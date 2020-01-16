@@ -4,6 +4,12 @@ version = "0.7.0"
 authors = ["tarkah <admin@tarkah.dev>"]
 edition = "2018"
 
+[workspace]
+members = [
+    ".",
+    "frontend"
+]
+
 [dependencies]
 glium = "0.25"
 cdg = "0.1"
