@@ -70,7 +70,7 @@ jobs:
 
       - script: rustup component add clippy
         displayName: Install Clippy
-      - script: cargo clippy --all
+      - script: cargo clippy
         displayName: Run Clippy
 
 
@@ -119,9 +119,9 @@ jobs:
           contents: '**'
           targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
 
-      - script: cargo build --all
+      - script: cargo build
         displayName: Cargo Build
-      - script: cargo test --all
+      - script: cargo test
         displayName: Cargo Test
 
 
@@ -194,10 +194,10 @@ jobs:
           contents: '**'
           targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
 
-      - script: cargo build --release --all
+      - script: cargo build --release
         displayName: Cargo Build
         condition: eq( variables['docker'], 'false' )
-      - script: cargo test --release --all
+      - script: cargo test --release
         displayName: Cargo Test
         condition: eq( variables['docker'], 'false' )
 
