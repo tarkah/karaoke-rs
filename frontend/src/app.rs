@@ -16,6 +16,8 @@ pub enum AppRoute {
     Artist(u64),
     #[to = "/queue"]
     Queue,
+    #[to = "/player"]
+    Player,
     #[to = "/page-not-found"]
     NotFound(Permissive<String>),
 }
@@ -105,6 +107,8 @@ impl Model {
                         AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
                         AppRoute::Artists => html!{<ArtistsPage />},
                         AppRoute::Queue => html!{<QueuePage />},
+                        AppRoute::Player => html!{<PlayerPage
+                            />},
                         AppRoute::NotFound(Permissive(None)) => html!{"Page not found"},
                         AppRoute::NotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)},
                         _ => html!{"Page not found"},

@@ -31,7 +31,13 @@ pub enum PlayerCommand {
     Play { kfile: Kfile },
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum LiveCommand {
     Stop, //
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum WebsocketCommand {
+    Ping { data: Vec<u8> },
+    Close,
 }

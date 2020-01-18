@@ -21,11 +21,6 @@ struct Queue {
     queue: Vec<Kfile>,
 }
 
-#[derive(Serialize)]
-struct JsonStatus {
-    status: &'static str,
-}
-
 #[derive(Serialize, Clone)]
 struct ResponseSong {
     id: u64,
@@ -54,6 +49,18 @@ struct Response {
     error_message: Option<String>,
 }
 
+impl Default for Response {
+    fn default() -> Response {
+        Response {
+            status: "ok",
+            data: None,
+            page: None,
+            total_pages: None,
+            error_message: None,
+        }
+    }
+}
+
 #[derive(Serialize)]
 enum DataType {
     #[serde(rename = "songs")]
@@ -62,6 +69,8 @@ enum DataType {
     Artist(Vec<ResponseArtist>),
     #[serde(rename = "queue")]
     Queue(Vec<ResponseSong>),
+    #[serde(rename = "next_song")]
+    NextSong(String),
 }
 
 #[derive(Deserialize)]
@@ -272,9 +281,13 @@ fn api_add(
 ) -> HttpResponse {
     let hash = form.hash;
     let kfile = collection.by_song[&hash].clone();
+    log::info!("Song added to queue: {} - {}", kfile.artist, kfile.song);
     let cmd = WorkerCommand::AddQueue { kfile };
     worker_sender.send(cmd).unwrap();
-    HttpResponse::Ok().json(JsonStatus { status: "ok" })
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
 }
 
 fn api_playnow(
@@ -284,27 +297,67 @@ fn api_playnow(
 ) -> HttpResponse {
     let hash = form.hash;
     let kfile = collection.by_song[&hash].clone();
+    log::info!("Play now requested for: {} - {}", kfile.artist, kfile.song);
     let cmd = WorkerCommand::PlayNow { kfile };
     worker_sender.send(cmd).unwrap();
-    HttpResponse::Ok().json(JsonStatus { status: "ok" })
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
 }
 
 fn api_next(worker_sender: web::Data<Sender<WorkerCommand>>) -> HttpResponse {
     let cmd = WorkerCommand::Next;
+    log::info!("Next song requested");
     worker_sender.send(cmd).unwrap();
-    HttpResponse::Ok().json(JsonStatus { status: "ok" })
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
 }
 
 fn api_clear(worker_sender: web::Data<Sender<WorkerCommand>>) -> HttpResponse {
     let cmd = WorkerCommand::ClearQueue;
+    log::info!("Queue clear requested");
     worker_sender.send(cmd).unwrap();
-    HttpResponse::Ok().json(JsonStatus { status: "ok" })
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
 }
 
 fn api_stop(worker_sender: web::Data<Sender<WorkerCommand>>) -> HttpResponse {
     let cmd = WorkerCommand::Stop;
+    log::info!("Stop requested");
     worker_sender.send(cmd).unwrap();
-    HttpResponse::Ok().json(JsonStatus { status: "ok" })
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
+}
+
+fn api_player_next(queue: web::Data<Arc<Mutex<Vec<Kfile>>>>) -> HttpResponse {
+    let _queue = queue.lock().unwrap();
+    if _queue.len() == 0 {
+        drop(_queue);
+        return HttpResponse::Ok().json(Response {
+            status: "error",
+            error_message: Some("no songs in queue".to_string()),
+            ..Response::default()
+        });
+    }
+
+    let next = _queue[0].mp3_path.clone();
+    let file_name = next.file_name().unwrap().to_str().unwrap();
+    let file_name = file_name.replace(".mp3", "");
+    drop(_queue);
+
+    log::info!("Next song requested");
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        data: Some(DataType::NextSong(file_name)),
+        ..Response::default()
+    })
 }
 
 fn serve_index() -> Result<actix_files::NamedFile, Error> {
@@ -321,9 +374,6 @@ fn get_server_port() -> u16 {
 }
 
 pub fn run() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=debug");
-    env_logger::init();
-
     let port = get_server_port();
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
 
@@ -334,6 +384,8 @@ pub fn run() -> std::io::Result<()> {
 
         let mut static_path = CONFIG.data_path.clone();
         static_path.push("static");
+        let mut song_path = CONFIG.data_path.clone();
+        song_path.push("songs");
 
         App::new()
             .data(collection)
@@ -348,7 +400,9 @@ pub fn run() -> std::io::Result<()> {
             .service(web::resource("/api/songs").route(web::get().to(api_songs)))
             .service(web::resource("/api/artists").route(web::get().to(api_artists)))
             .service(web::resource("/api/queue").route(web::get().to(api_queue)))
+            .service(web::resource("/api/player/next").route(web::get().to(api_player_next)))
             .service(actix_files::Files::new("/", static_path).index_file("index.html"))
+            .service(actix_files::Files::new("/songs", song_path))
             .default_service(
                 // Redirect all to index.html
                 web::get().to(serve_index),
@@ -356,7 +410,7 @@ pub fn run() -> std::io::Result<()> {
     })
     .bind(addr)?;
 
-    println!("Actix has launched from http://0.0.0.0:{}", port);
+    log::info!("Website has launched from http://0.0.0.0:{}", port);
 
     server.run()
 }

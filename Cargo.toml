@@ -28,6 +28,9 @@ rayon = "1.0"
 actix-web = "1.0"
 actix-files = "0.1"
 env_logger = "0.6"
+websocket = "0.23"
+multiqueue = "0.3"
+log = "0.4"
 
 [dependencies.rodio]
 version = "0.9"
