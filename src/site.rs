@@ -70,7 +70,7 @@ enum DataType {
     #[serde(rename = "queue")]
     Queue(Vec<ResponseSong>),
     #[serde(rename = "next_song")]
-    NextSong(String),
+    NextSong { mp3: String, cdg: String },
 }
 
 #[derive(Deserialize)]
@@ -347,15 +347,46 @@ fn api_player_next(queue: web::Data<Arc<Mutex<Vec<Kfile>>>>) -> HttpResponse {
         });
     }
 
-    let next = _queue[0].mp3_path.clone();
-    let file_name = next.file_name().unwrap().to_str().unwrap();
-    let file_name = file_name.replace(".mp3", "");
+    let mp3 = _queue[0]
+        .mp3_path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let cdg = _queue[0]
+        .cdg_path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
     drop(_queue);
 
-    log::info!("Next song requested");
     HttpResponse::Ok().json(Response {
         status: "ok",
-        data: Some(DataType::NextSong(file_name)),
+        data: Some(DataType::NextSong { mp3, cdg }),
+        ..Response::default()
+    })
+}
+
+fn api_player_ended(queue: web::Data<Arc<Mutex<Vec<Kfile>>>>) -> HttpResponse {
+    log::info!("Web player has finished song");
+
+    let mut _queue = queue.lock().unwrap();
+    if _queue.len() == 0 {
+        drop(_queue);
+        return HttpResponse::Ok().json(Response {
+            status: "ok",
+            ..Response::default()
+        });
+    }
+
+    _queue.remove(0);
+    drop(_queue);
+
+    HttpResponse::Ok().json(Response {
+        status: "ok",
         ..Response::default()
     })
 }
@@ -384,8 +415,8 @@ pub fn run() -> std::io::Result<()> {
 
         let mut static_path = CONFIG.data_path.clone();
         static_path.push("static");
-        let mut song_path = CONFIG.data_path.clone();
-        song_path.push("songs");
+
+        let song_path = CONFIG.song_path.clone();
 
         App::new()
             .data(collection)
@@ -401,8 +432,9 @@ pub fn run() -> std::io::Result<()> {
             .service(web::resource("/api/artists").route(web::get().to(api_artists)))
             .service(web::resource("/api/queue").route(web::get().to(api_queue)))
             .service(web::resource("/api/player/next").route(web::get().to(api_player_next)))
+            .service(web::resource("/api/player/ended").route(web::post().to(api_player_ended)))
+            .service(actix_files::Files::new("/songs/", song_path))
             .service(actix_files::Files::new("/", static_path).index_file("index.html"))
-            .service(actix_files::Files::new("/songs", song_path))
             .default_service(
                 // Redirect all to index.html
                 web::get().to(serve_index),

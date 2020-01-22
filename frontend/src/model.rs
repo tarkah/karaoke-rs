@@ -34,6 +34,8 @@ pub enum DataType {
     Artists(Vec<Artist>),
     #[serde(rename = "queue")]
     Queue(Vec<Song>),
+    #[serde(rename = "next_song")]
+    PlayerNextSong { mp3: String, cdg: String },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

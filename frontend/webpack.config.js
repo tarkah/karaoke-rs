@@ -12,6 +12,7 @@ module.exports = (env, argv) => {
       host: '0.0.0.0',
       proxy: {
         '/api': 'http://127.0.0.1:8080',
+        '/songs': 'http://127.0.0.1:8080',
       },
     },
     entry: './bootstrap.js',
@@ -28,6 +29,7 @@ module.exports = (env, argv) => {
       new WasmPackPlugin({
         crateDirectory: ".",
         extraArgs: "--no-typescript",
+        forceMode: "production", //Player fails under dev but works under production... not sure why?
       })
     ],
     watch: argv.mode !== 'production'

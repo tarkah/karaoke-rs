@@ -5,8 +5,23 @@ use karaoke::{
     log_error,
 };
 use multiqueue::BroadcastReceiver;
+use serde::{Deserialize, Serialize};
 use std::{thread, time};
 use websocket::{sync::Server, OwnedMessage};
+
+#[derive(Serialize, Deserialize)]
+pub struct WsMessage {
+    pub command: String,
+}
+
+impl WsMessage {
+    fn json(command: &str) -> String {
+        serde_json::to_string(&WsMessage {
+            command: command.to_string(),
+        })
+        .unwrap()
+    }
+}
 
 pub fn start_ws_server(receiver: BroadcastReceiver<LiveCommand>) -> Result<(), Error> {
     let mut server = Server::bind("0.0.0.0:9000")?;
@@ -32,7 +47,7 @@ pub fn start_ws_server(receiver: BroadcastReceiver<LiveCommand>) -> Result<(), E
 
                 log::info!("Connection from {}", ip);
 
-                let message = OwnedMessage::Text("Hello".to_string());
+                let message = OwnedMessage::Text(WsMessage::json("hello"));
                 if let Err(e) = client.send_message(&message) {
                     log_error(&format_err!("Websocket error: {}", e));
                     bail!(e);
@@ -48,7 +63,7 @@ pub fn start_ws_server(receiver: BroadcastReceiver<LiveCommand>) -> Result<(), E
                         if let Ok(cmd) = live_receiver.try_recv() {
                             match cmd {
                                 LiveCommand::Stop => {
-                                    let message = OwnedMessage::Text(String::from("Stop"));
+                                    let message = OwnedMessage::Text(WsMessage::json("stop"));
                                     if let Err(e) = sender.send_message(&message) {
                                         log_error(&format_err!("Websocket error: {}", e));
                                         break;
@@ -78,7 +93,7 @@ pub fn start_ws_server(receiver: BroadcastReceiver<LiveCommand>) -> Result<(), E
 
                         if now.elapsed().as_secs() >= 20 {
                             now = time::Instant::now();
-                            let message = OwnedMessage::Ping(String::from("Ping").into_bytes());
+                            let message = OwnedMessage::Text(WsMessage::json("ping"));
                             if let Err(e) = sender.send_message(&message) {
                                 log_error(&format_err!("Websocket error: {}", e));
                                 break;

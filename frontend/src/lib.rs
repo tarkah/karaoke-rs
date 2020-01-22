@@ -16,6 +16,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub fn run_app() -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+
     let log_config = if cfg!(debug_assertions) {
         Config {
             level: Level::Trace,
