@@ -36,6 +36,7 @@ pub enum Request {
     Stop,
     NextSong,
     ClearQueue,
+    PlayerActive,
     PlayerNextSong,
     FetchMp3(String),
     FetchCdg(String),
@@ -52,6 +53,7 @@ pub enum RequestType {
     Stop,
     NextSong,
     ClearQueue,
+    PlayerActive,
     PlayerNextSong,
     FetchMp3,
     FetchCdg,
@@ -75,6 +77,7 @@ pub enum ResponseData {
         total_pages: u32,
     },
     Queue(Vec<Song>),
+    PlayerActive(bool),
     PlayerNextSong {
         mp3: String,
         cdg: String,
@@ -170,6 +173,10 @@ impl Agent for ApiAgent {
                 let fetch_task = self.send_command(who, RequestType::Stop, None);
                 self.fetch_tasks.push(fetch_task);
             }
+            Request::PlayerActive => {
+                let fetch_task = self.get_data(who, RequestType::PlayerActive, None);
+                self.fetch_tasks.push(fetch_task);
+            }
             Request::PlayerNextSong => {
                 let fetch_task = self.get_data(who, RequestType::PlayerNextSong, None);
                 self.fetch_tasks.push(fetch_task);
@@ -214,6 +221,7 @@ impl ApiAgent {
                             total_pages: data.total_pages.unwrap_or(0),
                         },
                         DataType::Queue(songs) => ResponseData::Queue(songs),
+                        DataType::PlayerActive(active) => ResponseData::PlayerActive(active),
                         DataType::PlayerNextSong { mp3, cdg } => {
                             ResponseData::PlayerNextSong { mp3, cdg }
                         }
@@ -388,6 +396,7 @@ impl RequestType {
             RequestType::GetSongs => "songs",
             RequestType::GetArtists => "artists",
             RequestType::GetQueue => "queue",
+            RequestType::PlayerActive => "player",
             RequestType::PlayerNextSong => "player/next",
             RequestType::Ended => "player/ended",
             _ => "",
