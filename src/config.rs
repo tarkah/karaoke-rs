@@ -158,7 +158,7 @@ mod tests {
         let _config = Config {
             song_path: PathBuf::from("test/test_data/songs"),
             data_path: PathBuf::from("test/test_data"),
-            no_collection_update: true,
+            no_collection_update: false,
             use_web_player: true,
         };
         assert_eq!(config, _config);
