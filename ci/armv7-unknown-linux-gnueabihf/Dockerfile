@@ -2,7 +2,7 @@ FROM debian:stretch
 
 RUN dpkg --add-architecture armhf && \ 
     apt-get update && \
-    apt-get install -y curl build-essential libasound2-dev:armhf gcc-arm-linux-gnueabihf pkg-config
+    apt-get install -y curl build-essential libasound2-dev:armhf libssl-dev:armhf gcc-arm-linux-gnueabihf pkg-config
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
 
