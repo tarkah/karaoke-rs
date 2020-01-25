@@ -3,8 +3,7 @@ use failure::{format_err, Error};
 use js_sys::JsString;
 use log::{error, trace};
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageBitmap, ImageData, Window};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData, Window};
 use yew::{
     prelude::*,
     services::{
@@ -16,7 +15,6 @@ use yew::{
 pub enum Msg {
     Resize(WindowDimensions),
     Player(player::Response),
-    RenderFrame((ImageBitmap, (f32, f32, f32, f32))),
     Error(Error),
 }
 
@@ -25,8 +23,10 @@ pub struct PlayerPage {
     #[allow(dead_code)]
     player_agent: Box<dyn Bridge<player::PlayerAgent>>,
     window: Window,
-    canvas: Option<HtmlCanvasElement>,
-    render_context: Option<CanvasRenderingContext2d>,
+    player_canvas: Option<HtmlCanvasElement>,
+    hidden_canvas: Option<HtmlCanvasElement>,
+    player_render_context: Option<CanvasRenderingContext2d>,
+    hidden_render_context: Option<CanvasRenderingContext2d>,
     #[allow(dead_code)]
     resize_task: ResizeTask,
     width: u32,
@@ -51,8 +51,10 @@ impl Component for PlayerPage {
             link,
             window,
             player_agent,
-            canvas: None,
-            render_context: None,
+            player_canvas: None,
+            hidden_canvas: None,
+            player_render_context: None,
+            hidden_render_context: None,
             resize_task,
             width: 0,
             height: 0,
@@ -73,35 +75,19 @@ impl Component for PlayerPage {
                     mut cdg_frame,
                     background,
                 } => {
-                    let callback = self.link.callback(Msg::RenderFrame);
-
-                    let image: ImageData = ImageData::new_with_u8_clamped_array_and_sh(
+                    let image_data = ImageData::new_with_u8_clamped_array_and_sh(
                         wasm_bindgen::Clamped(cdg_frame.as_mut_slice()),
                         300,
                         216,
                     )
                     .unwrap();
 
-                    let promise = self
-                        .window
-                        .create_image_bitmap_with_image_data(&image)
-                        .unwrap();
-
-                    spawn_local(async move {
-                        let future = JsFuture::from(promise);
-                        let image: ImageBitmap = future.await.unwrap().unchecked_into();
-                        callback.emit((image, background))
-                    });
-
-                    drop(image);
+                    self.render_frame(image_data, background)
                 }
                 player::Response::ClearCanvas => {
                     self.clear_canvas();
                 }
             },
-            Msg::RenderFrame((cdg_frame, background)) => {
-                self.render_frame(cdg_frame, background);
-            }
         }
         false
     }
@@ -117,6 +103,7 @@ impl Component for PlayerPage {
         html! {
             <>
                 <canvas id="player"/>
+                <canvas id="hidden" width="300" height="216" />
                 <img id="player-background" src="player_background.png" />
             </>
         }
@@ -135,21 +122,36 @@ impl PlayerPage {
     }
 
     fn load_canvas(&mut self) -> Result<(), Error> {
-        let canvas = get_canvas(&self.window).ok_or_else(|| format_err!("Failed to get canvas"))?;
-        self.canvas = Some(canvas);
+        let player_canvas = get_canvas(&self.window, "player")
+            .ok_or_else(|| format_err!("Failed to get player canvas"))?;
+        let hidden_canvas = get_canvas(&self.window, "hidden")
+            .ok_or_else(|| format_err!("Failed to get hidden canvas"))?;
+        self.player_canvas = Some(player_canvas);
+        self.hidden_canvas = Some(hidden_canvas);
+
         Ok(())
     }
 
     fn load_render_context(&mut self) -> Result<(), Error> {
-        let context = self
-            .canvas
+        let player_render_context = self
+            .player_canvas
             .as_ref()
             .ok_or_else(|| format_err!("Failed to get canvas"))?
             .get_context("2d")
             .map_err(|_| format_err!("Failed to get 2d rendering context"))?
             .ok_or_else(|| format_err!("Failed to get 2d rendering context"))?
             .unchecked_into();
-        self.render_context = Some(context);
+        self.player_render_context = Some(player_render_context);
+
+        let hidden_render_context = self
+            .hidden_canvas
+            .as_ref()
+            .ok_or_else(|| format_err!("Failed to get canvas"))?
+            .get_context("2d")
+            .map_err(|_| format_err!("Failed to get 2d rendering context"))?
+            .ok_or_else(|| format_err!("Failed to get 2d rendering context"))?
+            .unchecked_into();
+        self.hidden_render_context = Some(hidden_render_context);
         Ok(())
     }
 
@@ -176,13 +178,17 @@ impl PlayerPage {
         self.width = dimensions.width as u32;
         self.height = dimensions.height as u32;
 
-        self.canvas.as_mut().unwrap().set_width(self.width);
-        self.canvas.as_mut().unwrap().set_height(self.height);
+        self.player_canvas.as_mut().unwrap().set_width(self.width);
+        self.player_canvas.as_mut().unwrap().set_height(self.height);
         trace!("Canvas resized to: {}x{}", self.width, self.height);
     }
 
-    fn render_frame(&mut self, cdg_frame: ImageBitmap, background: (f32, f32, f32, f32)) {
-        let render_context = self.render_context.as_ref().unwrap();
+    fn render_frame(&mut self, image_data: ImageData, background: (f32, f32, f32, f32)) {
+        let player_render_context = self.player_render_context.as_ref().unwrap();
+        let hidden_render_context = self.hidden_render_context.as_ref().unwrap();
+        let hidden_canvas = self.hidden_canvas.as_ref().unwrap();
+
+        let _ = hidden_render_context.put_image_data(&image_data, 0.0, 0.0);
 
         let color: JsString = format!(
             "rgba({}, {}, {}, {})",
@@ -190,37 +196,30 @@ impl PlayerPage {
         )
         .as_str()
         .into();
-        render_context.set_fill_style(&color);
-        render_context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
+        player_render_context.set_fill_style(&color);
+        player_render_context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
 
         let color: JsString = format!("rgba({}, {}, {}, {})", 0, 0, 0, 1).as_str().into();
-        render_context.set_fill_style(&color);
-        render_context.fill_rect(
+        player_render_context.set_fill_style(&color);
+        player_render_context.fill_rect(
             self.width as f64 / 2.0 - (300.0 * 1.5) / 2.0,
             self.height as f64 / 2.0 - (216.0 * 1.5) / 2.0,
             300.0 * 1.5,
             216.0 * 1.5,
         );
 
-        let _ = render_context
-            .draw_image_with_image_bitmap_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
-                &cdg_frame,
-                0.0,
-                0.0,
-                300.0,
-                216.0,
-                self.width as f64 / 2.0 - (300.0 * 1.5) / 2.0,
-                self.height as f64 / 2.0 - (216.0 * 1.5) / 2.0,
-                300.0 * 1.5,
-                216.0 * 1.5,
-            );
-
-        cdg_frame.close();
+        let _ = player_render_context.draw_image_with_html_canvas_element_and_dw_and_dh(
+            &hidden_canvas,
+            self.width as f64 / 2.0 - (300.0 * 1.5) / 2.0,
+            self.height as f64 / 2.0 - (216.0 * 1.5) / 2.0,
+            300.0 * 1.5,
+            216.0 * 1.5,
+        );
     }
 
     fn clear_canvas(&mut self) {
-        let render_context = self.render_context.as_ref().unwrap();
-        render_context.clear_rect(0.0, 0.0, self.width as f64, self.height as f64);
+        let player_render_context = self.player_render_context.as_ref().unwrap();
+        player_render_context.clear_rect(0.0, 0.0, self.width as f64, self.height as f64);
     }
 }
 
@@ -228,11 +227,6 @@ fn get_window() -> Window {
     web_sys::window().unwrap()
 }
 
-fn get_canvas(window: &Window) -> Option<HtmlCanvasElement> {
-    Some(
-        window
-            .document()?
-            .get_element_by_id("player")?
-            .unchecked_into(),
-    )
+fn get_canvas(window: &Window, id: &str) -> Option<HtmlCanvasElement> {
+    Some(window.document()?.get_element_by_id(id)?.unchecked_into())
 }

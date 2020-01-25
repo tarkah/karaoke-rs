@@ -44,6 +44,5 @@ features = [
     'AudioBuffer',
     'AudioNode',
     'AudioDestinationNode',
-    'ImageBitmap',
     'ImageData'
 ]
