@@ -1,6 +1,6 @@
 use glob::glob;
 use id3::Tag;
-use karaoke::CONFIG;
+use karaoke::{log_error, CONFIG};
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use rustbreak::{deser::Yaml, FileDatabase};
@@ -18,7 +18,10 @@ lazy_static! {
         let collection = startup(CONFIG.no_collection_update);
         match collection {
             Ok(c) => c,
-            Err(e) => panic!("{}", e),
+            Err(e) => {
+                log_error(&e);
+                std::process::exit(1);
+            }
         }
     };
 }
@@ -91,11 +94,11 @@ impl Custom for CollectionDB {
             })
             .collect();
 
-        println!(
+        log::info!(
             "Invalid songs removed: {}",
             missing_valid_keys_to_remove.len()
         );
-        println!("New songs added: {}", valid_kfiles_to_add.len());
+        log::info!("New songs added: {}", valid_kfiles_to_add.len());
 
         self.write(|db| {
             for key in missing_valid_keys_to_remove {
@@ -121,8 +124,8 @@ impl Custom for CollectionDB {
         })?;
 
         let collection = Collection::new(_collection);
-        println!("# Songs: {}", collection.by_song.len());
-        println!("# Artists: {}", collection.by_artist.len());
+        log::info!("# Songs: {}", collection.by_song.len());
+        log::info!("# Artists: {}", collection.by_artist.len());
 
         Ok(collection)
     }
@@ -353,6 +356,7 @@ mod tests {
             song_path,
             data_path,
             no_collection_update: false,
+            use_web_player: false,
         };
         let initialize = CollectionDB::initialize(&config.data_path);
         assert!(initialize.is_ok());

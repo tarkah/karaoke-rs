@@ -5,6 +5,7 @@ use crate::{
 };
 use failure::{format_err, Error};
 use log::trace;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use yew::{
@@ -35,6 +36,11 @@ pub enum Request {
     Stop,
     NextSong,
     ClearQueue,
+    PlayerActive,
+    PlayerNextSong,
+    FetchMp3(String),
+    FetchCdg(String),
+    Ended,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
@@ -47,6 +53,11 @@ pub enum RequestType {
     Stop,
     NextSong,
     ClearQueue,
+    PlayerActive,
+    PlayerNextSong,
+    FetchMp3,
+    FetchCdg,
+    Ended,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -66,6 +77,13 @@ pub enum ResponseData {
         total_pages: u32,
     },
     Queue(Vec<Song>),
+    PlayerActive(bool),
+    PlayerNextSong {
+        mp3: String,
+        cdg: String,
+    },
+    FileMp3(Vec<u8>),
+    FileCdg(Vec<u8>),
     Empty,
 }
 
@@ -155,6 +173,26 @@ impl Agent for ApiAgent {
                 let fetch_task = self.send_command(who, RequestType::Stop, None);
                 self.fetch_tasks.push(fetch_task);
             }
+            Request::PlayerActive => {
+                let fetch_task = self.get_data(who, RequestType::PlayerActive, None);
+                self.fetch_tasks.push(fetch_task);
+            }
+            Request::PlayerNextSong => {
+                let fetch_task = self.get_data(who, RequestType::PlayerNextSong, None);
+                self.fetch_tasks.push(fetch_task);
+            }
+            Request::FetchMp3(file_name) => {
+                let fetch_task = self.fetch_file(who, RequestType::FetchMp3, file_name);
+                self.fetch_tasks.push(fetch_task);
+            }
+            Request::FetchCdg(file_name) => {
+                let fetch_task = self.fetch_file(who, RequestType::FetchCdg, file_name);
+                self.fetch_tasks.push(fetch_task);
+            }
+            Request::Ended => {
+                let fetch_task = self.send_command(who, RequestType::Ended, None);
+                self.fetch_tasks.push(fetch_task);
+            }
         }
     }
 }
@@ -183,6 +221,10 @@ impl ApiAgent {
                             total_pages: data.total_pages.unwrap_or(0),
                         },
                         DataType::Queue(songs) => ResponseData::Queue(songs),
+                        DataType::PlayerActive(active) => ResponseData::PlayerActive(active),
+                        DataType::PlayerNextSong { mp3, cdg } => {
+                            ResponseData::PlayerNextSong { mp3, cdg }
+                        }
                     };
 
                     return Msg::Return {
@@ -192,8 +234,6 @@ impl ApiAgent {
                     };
                 } else if let Ok(ApiResponse::Error(error)) = body {
                     trace!("Error in API response: {:?}", error.error_message);
-                } else {
-                    trace!("Error in API response");
                 }
 
                 Msg::Return {
@@ -235,8 +275,6 @@ impl ApiAgent {
                     }
                 } else if let Ok(ApiResponse::Error(error)) = body {
                     trace!("Error in API response: {:?}", error.error_message);
-                } else {
-                    trace!("Error in API response");
                 }
 
                 Msg::Return {
@@ -262,6 +300,48 @@ impl ApiAgent {
         };
 
         self.fetch_service.fetch(request, callback)
+    }
+
+    fn fetch_file(
+        &mut self,
+        who: HandlerId,
+        request_type: RequestType,
+        file_name: String,
+    ) -> fetch::FetchTask {
+        let callback =
+            self.link
+                .callback(move |response: fetch::Response<Result<Vec<u8>, Error>>| {
+                    let (parts, body) = response.into_parts();
+
+                    if !parts.status.is_success() || body.is_err() {
+                        return Msg::Return {
+                            who,
+                            request_type,
+                            response: Response::Error,
+                        };
+                    }
+
+                    let response_data = match request_type {
+                        RequestType::FetchCdg => ResponseData::FileCdg(body.unwrap()),
+                        _ => ResponseData::FileMp3(body.unwrap()),
+                    };
+
+                    let response = Response::Success(response_data);
+
+                    Msg::Return {
+                        who,
+                        request_type,
+                        response,
+                    }
+                });
+
+        trace!("Fetching file: {}", file_name);
+        let encoded = utf8_percent_encode(&file_name, NON_ALPHANUMERIC).to_string();
+
+        let request = fetch::Request::get(&format!("/songs/{}", encoded))
+            .body(Nothing)
+            .unwrap();
+        self.fetch_service.fetch_binary(request, callback)
     }
 }
 
@@ -316,6 +396,10 @@ impl RequestType {
             RequestType::GetSongs => "songs",
             RequestType::GetArtists => "artists",
             RequestType::GetQueue => "queue",
+            RequestType::PlayerActive => "player",
+            RequestType::PlayerNextSong => "player/next",
+            RequestType::Ended => "player/ended",
+            _ => "",
         }
     }
 }

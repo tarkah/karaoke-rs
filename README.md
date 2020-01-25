@@ -14,9 +14,9 @@
 
 ---
 
-Your karaoke collection can be browsed and queued to the player from a self served website. Only supports MP3+G (mp3 & corresponding cdg) files.
+Your karaoke collection can be browsed and queued from a self served website and played either natively on your computer, or remotely through any browser. Only supports MP3+G (mp3 & corresponding cdg) files.
 
-**_Now built off [glium](https://github.com/tomaka/glium)! No more dependency on SFML, the binaries should run out of the box on any system. Confirmed working on Raspberry Pi 3B + with OpenGL 2.1_**
+**_Now includes a web player. Songs can be played from any modern browser, anywhere in the world! Use command line flag `--use-web-player` to enable this feature. Player is accessible from the `/player` page on the website and can be controlled just like the native player through commands on the queue page._**
 
 # Setup
 ### Linux
@@ -47,11 +47,29 @@ cargo build --release
 ```
 - Binary located at `target/release/karaoke-rs`
 
+# CLI Arguments
+```
+karoake-rs 0.7.0
+tarkah <admin@tarkah.dev>
+A simple, network enabled karaoke player in Rust
+
+USAGE:
+    karaoke-rs [FLAGS] [OPTIONS]
+
+FLAGS:
+    -h, --help              Prints help information
+    -w, --use-web-player    Use web player instead of native player
+    -V, --version           Prints version information
+
+OPTIONS:
+    -c, --config <FILE>                Sets a custom config file
+    -d, --data <DIR>                   Sets a custom data directory
+    -r, --refresh-collection <BOOL>    Specify if collection should be refreshed on startup [possible values: true,
+                                       false]
+    -s, --songs <DIR>                  Sets a custom song directory
+```
 
 # Screenshots
-
-### Command Line
-![cli](/screenshots/cli.png?raw=true)
 
 ### Songs Page
 ![songs](/screenshots/songs.png?raw=true)

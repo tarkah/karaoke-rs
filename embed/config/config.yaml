@@ -16,3 +16,6 @@
 
 # Disable collection refresh on startup (helpful if collection is huge and not changing)
 #no_collection_update: false
+
+# Use web player instead of native player (playable from any browser)
+#use_web_player: false
