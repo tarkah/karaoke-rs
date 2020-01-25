@@ -67,9 +67,6 @@ impl Component for PlayerPage {
                 self.resize(dimensions);
                 return true;
             }
-            Msg::Error(e) => {
-                error!("ERROR: {}", e);
-            }
             Msg::Player(response) => match response {
                 player::Response::RenderFrame {
                     mut cdg_frame,
@@ -82,12 +79,15 @@ impl Component for PlayerPage {
                     )
                     .unwrap();
 
-                    self.render_frame(image_data, background)
+                    self.render_frame(image_data, background);
                 }
                 player::Response::ClearCanvas => {
                     self.clear_canvas();
                 }
             },
+            Msg::Error(e) => {
+                error!("ERROR: {}", e);
+            }
         }
         false
     }

@@ -28,17 +28,17 @@ pub enum Msg {
     MainLoop,
     PlayingLoop,
     NotPlayingLoop,
-    WsReceived(Json<Result<WsMessage, Error>>),
-    WsStatus(WebSocketStatus),
-    ApiResponse(api::Response),
+    Stop,
+    Ended,
     GetSong,
     FetchMp3(String),
     FetchCdg(String),
     DecodeMp3,
     PlayMp3(AudioBuffer),
     StartCdgPlayer,
-    Stop,
-    Ended,
+    ApiResponse(api::Response),
+    WsReceived(Json<Result<WsMessage, Error>>),
+    WsStatus(WebSocketStatus),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -121,7 +121,6 @@ impl Agent for PlayerAgent {
         self.bridged_component = Some(id);
     }
 
-    #[allow(clippy::cognitive_complexity)]
     fn update(&mut self, msg: Self::Message) {
         match msg {
             Msg::MainLoop => {
@@ -133,39 +132,50 @@ impl Agent for PlayerAgent {
                     self.update(Msg::NotPlayingLoop);
                 }
             }
+            Msg::PlayingLoop => {
+                self.playing_loop();
+            }
             Msg::NotPlayingLoop => {
-                if self.audio_context.is_none() {
-                    self.audio_context = get_audio_context();
-                    trace!("Got audio context");
-                }
+                self.not_playing_loop();
+            }
+            Msg::Stop => {
+                self.render_task = None;
 
-                if self.buffer_source_node.is_none() && self.audio_context.is_some() {
-                    self.buffer_source_node =
-                        get_buffer_source(&self.audio_context.as_ref().unwrap());
+                trace!("Stopping player...");
+                self.buffer_source_node_onended = None;
+                let _ = self.buffer_source_node.as_ref().unwrap().disconnect();
+                self.buffer_source_node = None;
 
-                    //let ended = self.ended.clone();
-                    let callback = self.link.callback(|_| Msg::Ended);
-                    let onended = EventListener::new(
-                        &self.buffer_source_node.as_ref().unwrap().as_ref(),
-                        "ended",
-                        move |_| {
-                            callback.emit(());
-                        },
-                    );
-                    self.buffer_source_node_onended = Some(onended);
+                self.mp3 = FileStatus::None;
+                self.cdg = FileStatus::None;
+                self.cdg_player = None;
+                self.last_sector = 0.0;
 
-                    trace!("Got buffer source");
-                }
+                self.playing = false;
 
-                if self.cdg == FileStatus::None && self.mp3 == FileStatus::None {
-                    self.update(Msg::GetSong);
-                    trace!("Getting next song...");
-                }
+                self.link
+                    .respond(self.bridged_component.unwrap(), Response::ClearCanvas);
 
                 self.timeout_task = Some(self.timeout_service.spawn(
-                    Duration::from_millis(1000),
+                    Duration::from_millis(3000),
                     self.link.callback(|_| Msg::MainLoop),
                 ));
+            }
+            Msg::Ended => {
+                trace!("Song ended...");
+                self.api_agent.send(api::Request::Ended);
+                self.update(Msg::Stop);
+            }
+            Msg::GetSong => {
+                self.api_agent.send(api::Request::PlayerNextSong);
+            }
+            Msg::FetchMp3(file_name) => {
+                self.api_agent.send(api::Request::FetchMp3(file_name));
+                self.mp3 = FileStatus::Fetching;
+            }
+            Msg::FetchCdg(file_name) => {
+                self.api_agent.send(api::Request::FetchCdg(file_name));
+                self.cdg = FileStatus::Fetching;
             }
             Msg::DecodeMp3 => {
                 if let FileStatus::Fetched(bytes) = &self.mp3 {
@@ -214,60 +224,23 @@ impl Agent for PlayerAgent {
                     self.cdg_player = Some(cdg_player);
                 }
             }
-            Msg::PlayingLoop => {
-                let time_played =
-                    self.audio_context.as_ref().unwrap().current_time() - self.song_start_time;
-
-                let calc_sector = (time_played / 0.013_333_333).floor();
-
-                if calc_sector >= 0.0 {
-                    let sectors_since = calc_sector - self.last_sector;
-
-                    let cdg_frame = self.cdg_player.as_mut().unwrap().next_frame(sectors_since);
-                    let background = self.cdg_player.as_mut().unwrap().rainbow_cycle();
-                    let response = Response::RenderFrame {
-                        cdg_frame,
-                        background,
-                    };
-
-                    self.last_sector = calc_sector;
-
-                    self.link.respond(self.bridged_component.unwrap(), response);
+            Msg::ApiResponse(response) => match response {
+                api::Response::Success(api::ResponseData::PlayerNextSong { mp3, cdg }) => {
+                    self.update(Msg::FetchMp3(mp3));
+                    self.update(Msg::FetchCdg(cdg));
                 }
-
-                self.render_task = Some(
-                    self.render_service
-                        .request_animation_frame(self.link.callback(|_| Msg::PlayingLoop)),
-                );
-            }
-            Msg::Stop => {
-                self.render_task = None;
-
-                trace!("Stopping player...");
-                self.buffer_source_node_onended = None;
-                let _ = self.buffer_source_node.as_ref().unwrap().disconnect();
-                self.buffer_source_node = None;
-
-                self.mp3 = FileStatus::None;
-                self.cdg = FileStatus::None;
-                self.cdg_player = None;
-                self.last_sector = 0.0;
-
-                self.playing = false;
-
-                self.link
-                    .respond(self.bridged_component.unwrap(), Response::ClearCanvas);
-
-                self.timeout_task = Some(self.timeout_service.spawn(
-                    Duration::from_millis(3000),
-                    self.link.callback(|_| Msg::MainLoop),
-                ));
-            }
-            Msg::Ended => {
-                trace!("Song ended...");
-                self.api_agent.send(api::Request::Ended);
-                self.update(Msg::Stop);
-            }
+                api::Response::Success(api::ResponseData::FileMp3(bytes)) => {
+                    log::trace!("Got mp3, is {} bytes", bytes.len());
+                    self.mp3 = FileStatus::Fetched(bytes);
+                    self.update(Msg::DecodeMp3);
+                }
+                api::Response::Success(api::ResponseData::FileCdg(bytes)) => {
+                    log::trace!("Got cdg, is {} bytes", bytes.len());
+                    self.cdg = FileStatus::Fetched(bytes);
+                    self.update(Msg::StartCdgPlayer);
+                }
+                _ => {}
+            },
             Msg::WsReceived(Json(response)) => match response {
                 Ok(data) => {
                     log::trace!("Websocket Received command: {}", data.command);
@@ -290,38 +263,72 @@ impl Agent for PlayerAgent {
                 WebSocketStatus::Closed => log::trace!("Websocket closed"),
                 WebSocketStatus::Opened => log::trace!("Websocket connection established"),
             },
-            Msg::GetSong => {
-                self.api_agent.send(api::Request::PlayerNextSong);
-            }
-            Msg::FetchCdg(file_name) => {
-                self.api_agent.send(api::Request::FetchCdg(file_name));
-                self.cdg = FileStatus::Fetching;
-            }
-            Msg::FetchMp3(file_name) => {
-                self.api_agent.send(api::Request::FetchMp3(file_name));
-                self.mp3 = FileStatus::Fetching;
-            }
-            Msg::ApiResponse(response) => match response {
-                api::Response::Success(api::ResponseData::PlayerNextSong { mp3, cdg }) => {
-                    self.update(Msg::FetchMp3(mp3));
-                    self.update(Msg::FetchCdg(cdg));
-                }
-                api::Response::Success(api::ResponseData::FileMp3(bytes)) => {
-                    log::trace!("Got mp3, is {} bytes", bytes.len());
-                    self.mp3 = FileStatus::Fetched(bytes);
-                    self.update(Msg::DecodeMp3);
-                }
-                api::Response::Success(api::ResponseData::FileCdg(bytes)) => {
-                    log::trace!("Got cdg, is {} bytes", bytes.len());
-                    self.cdg = FileStatus::Fetched(bytes);
-                    self.update(Msg::StartCdgPlayer);
-                }
-                _ => {}
-            },
         }
     }
 
     fn handle_input(&mut self, _: Self::Input, _: HandlerId) {}
+}
+
+impl PlayerAgent {
+    fn playing_loop(&mut self) {
+        let time_played =
+            self.audio_context.as_ref().unwrap().current_time() - self.song_start_time;
+
+        let calc_sector = (time_played / 0.013_333_333).floor();
+
+        if calc_sector >= 0.0 {
+            let sectors_since = calc_sector - self.last_sector;
+
+            let cdg_frame = self.cdg_player.as_mut().unwrap().next_frame(sectors_since);
+            let background = self.cdg_player.as_mut().unwrap().rainbow_cycle();
+            let response = Response::RenderFrame {
+                cdg_frame,
+                background,
+            };
+
+            self.last_sector = calc_sector;
+
+            self.link.respond(self.bridged_component.unwrap(), response);
+        }
+
+        self.render_task = Some(
+            self.render_service
+                .request_animation_frame(self.link.callback(|_| Msg::PlayingLoop)),
+        );
+    }
+
+    fn not_playing_loop(&mut self) {
+        if self.audio_context.is_none() {
+            self.audio_context = get_audio_context();
+            trace!("Got audio context");
+        }
+
+        if self.buffer_source_node.is_none() && self.audio_context.is_some() {
+            self.buffer_source_node = get_buffer_source(&self.audio_context.as_ref().unwrap());
+
+            let callback = self.link.callback(|_| Msg::Ended);
+            let onended = EventListener::new(
+                &self.buffer_source_node.as_ref().unwrap().as_ref(),
+                "ended",
+                move |_| {
+                    callback.emit(());
+                },
+            );
+            self.buffer_source_node_onended = Some(onended);
+
+            trace!("Got buffer source");
+        }
+
+        if self.cdg == FileStatus::None && self.mp3 == FileStatus::None {
+            self.update(Msg::GetSong);
+            trace!("Getting next song...");
+        }
+
+        self.timeout_task = Some(self.timeout_service.spawn(
+            Duration::from_millis(1000),
+            self.link.callback(|_| Msg::MainLoop),
+        ));
+    }
 }
 
 fn get_ws_host() -> String {
