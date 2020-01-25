@@ -49,7 +49,7 @@ cargo build --release
 
 # CLI Arguments
 ```
-karoake-rs 0.7.0
+karoake-rs 0.8.0
 tarkah <admin@tarkah.dev>
 A simple, network enabled karaoke player in Rust
 
