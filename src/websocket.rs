@@ -107,27 +107,27 @@ pub fn start_ws_server(receiver: BroadcastReceiver<LiveCommand>) -> Result<(), E
                 });
 
                 for message in receiver.incoming_messages() {
-                    let message = message.unwrap();
-
-                    match message {
-                        OwnedMessage::Close(_) => {
-                            log::debug!("Close requested from {}", ip);
-                            command_sender.send(WebsocketCommand::Close).unwrap();
-                            break;
+                    if let Ok(message) = message {
+                        match message {
+                            OwnedMessage::Close(_) => {
+                                log::debug!("Close requested from {}", ip);
+                                command_sender.send(WebsocketCommand::Close).unwrap();
+                                break;
+                            }
+                            OwnedMessage::Ping(data) => {
+                                log::debug!("Ping received from {}", ip);
+                                command_sender
+                                    .send(WebsocketCommand::Ping { data })
+                                    .unwrap();
+                            }
+                            OwnedMessage::Text(text) => {
+                                log::debug!("Message received from {}: {}", ip, text);
+                            }
+                            OwnedMessage::Pong(_) => {
+                                log::debug!("Pong received from {}", ip);
+                            }
+                            _ => {}
                         }
-                        OwnedMessage::Ping(data) => {
-                            log::debug!("Ping received from {}", ip);
-                            command_sender
-                                .send(WebsocketCommand::Ping { data })
-                                .unwrap();
-                        }
-                        OwnedMessage::Text(text) => {
-                            log::debug!("Message received from {}: {}", ip, text);
-                        }
-                        OwnedMessage::Pong(_) => {
-                            log::debug!("Pong received from {}", ip);
-                        }
-                        _ => {}
                     }
                 }
                 log::debug!("Receiver thread disconnected for: {}", ip);
