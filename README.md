@@ -66,6 +66,8 @@ FLAGS:
 OPTIONS:
     -c, --config <FILE>                Sets a custom config file
     -d, --data <DIR>                   Sets a custom data directory
+    -p, --port <PORT>                  Specify website port
+        --port-ws <PORT_WS>            Specify a websocket port when using the web player feature
     -r, --refresh-collection <BOOL>    Specify if collection should be refreshed on startup [possible values: true,
                                        false]
     -s, --songs <DIR>                  Sets a custom song directory
