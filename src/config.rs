@@ -42,6 +42,7 @@ pub struct Config {
     pub data_path: PathBuf,
     pub no_collection_update: bool,
     pub use_web_player: bool,
+    pub song_format: String,
 }
 
 impl Default for Config {
@@ -51,6 +52,7 @@ impl Default for Config {
             data_path: DATA_DIR.to_path_buf(),
             no_collection_update: false,
             use_web_player: false,
+            song_format: "[*] - [Artist] - [Title]".to_owned(),
         }
     }
 }
@@ -158,8 +160,8 @@ mod tests {
         let _config = Config {
             song_path: PathBuf::from("test/test_data/songs"),
             data_path: PathBuf::from("test/test_data"),
-            no_collection_update: false,
             use_web_player: true,
+            ..Config::default()
         };
         assert_eq!(config, _config);
 

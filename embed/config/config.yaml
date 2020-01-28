@@ -19,3 +19,14 @@
 
 # Use web player instead of native player (playable from any browser)
 #use_web_player: false
+
+# Specify format of song file name in collection. If no id3 tags are found, it will
+# attempt to parse song name for title and artist using the following format.
+#
+# [Artist] and [Title] must be specifid. [*] can optionally be used as a catch all
+# to specify all characters outside the artist and title. A deliminating character
+# must be used between [Artist], [Title] and [*] tags.
+#
+# Default format is: "[*] - [Artist] - [Title]"
+#
+#song_format: "[*] - [Artist] - [Title]"

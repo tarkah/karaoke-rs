@@ -65,7 +65,7 @@ impl Custom for CollectionDB {
 
         let valid_kfiles = valid
             .par_iter()
-            .map(|path| Kfile::new(path))
+            .map(|path| Kfile::new(path, &CONFIG.song_format))
             .collect::<Vec<Kfile>>();
 
         let missing_valid_keys_to_remove: Vec<u64> = existing_keys
@@ -230,7 +230,7 @@ pub struct Kfile {
 }
 
 impl Kfile {
-    fn new(path: &PathBuf) -> Kfile {
+    fn new(path: &PathBuf, format: &str) -> Kfile {
         let mp3_path = PathBuf::from(path.to_str().unwrap().to_string() + ".mp3");
         let cdg_path = PathBuf::from(path.to_str().unwrap().to_string() + ".cdg");
         let file_name = path.file_name().unwrap().to_str().unwrap();
@@ -239,19 +239,19 @@ impl Kfile {
         let tag_artist = tag.artist();
         let tag_song = tag.title();
 
-        let parsed_file = song_parse(file_name);
-        let (parsed_artist, parsed_song) = match parsed_file {
-            Some(tuple) => (tuple.0, tuple.1),
-            None => ("<None>", file_name),
+        let parse_result = std::panic::catch_unwind(|| song_parse(file_name, format));
+        let (parsed_artist, parsed_song) = match parse_result {
+            Ok(Some(parse)) => (parse.artist, parse.title),
+            _ => ("<None>".to_owned(), file_name.to_owned()),
         };
 
         let artist = match tag_artist {
             Some(s) => s,
-            None => parsed_artist,
+            None => &parsed_artist,
         };
         let song = match tag_song {
             Some(s) => s,
-            None => parsed_song,
+            None => &parsed_song,
         };
 
         let artist_hash = calculate_hash(&artist);
@@ -278,17 +278,263 @@ impl Default for Kfile {
     }
 }
 
-//Parses artist & song from files with naming convention: "album - artist - song"
-fn song_parse(file_name: &str) -> Option<(&str, &str)> {
-    let mut split: Vec<&str> = file_name.split(" - ").collect();
+pub struct ParseResult {
+    pub title: String,
+    pub artist: String,
+}
 
-    if split.len() == 3 {
-        let song = split.pop().unwrap();
-        let artist = split.pop().unwrap();
-        Some((artist, song))
+#[derive(Debug)]
+enum ParseOrder {
+    RemainingArtistTitle,
+    RemainingTitleArtist,
+    ArtistTitleRemaining,
+    ArtistRemainingTitle,
+    TitleArtistRemaining,
+    TitleRemainingArtist,
+    ArtistTitle,
+    TitleArtist,
+}
+
+#[allow(clippy::cognitive_complexity)]
+fn song_parse(file_name: &str, song_format: &str) -> Option<ParseResult> {
+    let mut file_name = file_name.to_owned();
+
+    let artist_idx = song_format.find("[Artist]")?;
+    let title_idx = song_format.find("[Title]")?;
+    let remaining_idx = song_format.find("[*]");
+
+    let parse_order = {
+        if let Some(remaining_idx) = remaining_idx {
+            if remaining_idx < artist_idx && remaining_idx < title_idx {
+                if artist_idx < title_idx {
+                    ParseOrder::RemainingArtistTitle
+                } else {
+                    ParseOrder::RemainingTitleArtist
+                }
+            } else if artist_idx < remaining_idx && artist_idx < title_idx {
+                if remaining_idx < title_idx {
+                    ParseOrder::ArtistRemainingTitle
+                } else {
+                    ParseOrder::ArtistTitleRemaining
+                }
+            } else if remaining_idx < artist_idx {
+                ParseOrder::TitleRemainingArtist
+            } else {
+                ParseOrder::TitleArtistRemaining
+            }
+        } else if title_idx < artist_idx {
+            ParseOrder::TitleArtist
+        } else {
+            ParseOrder::ArtistTitle
+        }
+    };
+
+    let delimiter_start = match parse_order {
+        ParseOrder::RemainingArtistTitle => {
+            if remaining_idx? > 0 {
+                Some(&song_format[..remaining_idx?])
+            } else {
+                None
+            }
+        }
+        ParseOrder::RemainingTitleArtist => {
+            if remaining_idx? > 0 {
+                Some(&song_format[..remaining_idx?])
+            } else {
+                None
+            }
+        }
+        ParseOrder::TitleArtistRemaining => {
+            if title_idx > 0 {
+                Some(&song_format[..title_idx])
+            } else {
+                None
+            }
+        }
+        ParseOrder::TitleRemainingArtist => {
+            if title_idx > 0 {
+                Some(&song_format[..title_idx])
+            } else {
+                None
+            }
+        }
+        ParseOrder::ArtistRemainingTitle => {
+            if artist_idx > 0 {
+                Some(&song_format[..artist_idx])
+            } else {
+                None
+            }
+        }
+        ParseOrder::ArtistTitleRemaining => {
+            if artist_idx > 0 {
+                Some(&song_format[..artist_idx])
+            } else {
+                None
+            }
+        }
+        ParseOrder::ArtistTitle => {
+            if artist_idx > 0 {
+                Some(&song_format[..artist_idx])
+            } else {
+                None
+            }
+        }
+        ParseOrder::TitleArtist => {
+            if title_idx > 0 {
+                Some(&song_format[..title_idx])
+            } else {
+                None
+            }
+        }
+    };
+
+    let delimiter_end = match parse_order {
+        ParseOrder::RemainingArtistTitle => {
+            if title_idx < song_format.len() - 7 {
+                Some(&song_format[(title_idx + 7)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::RemainingTitleArtist => {
+            if artist_idx < song_format.len() - 8 {
+                Some(&song_format[(artist_idx + 8)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::TitleArtistRemaining => {
+            if remaining_idx? < song_format.len() - 3 {
+                Some(&song_format[(remaining_idx? + 3)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::TitleRemainingArtist => {
+            if artist_idx < song_format.len() - 8 {
+                Some(&song_format[(artist_idx + 8)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::ArtistRemainingTitle => {
+            if title_idx < song_format.len() - 7 {
+                Some(&song_format[(title_idx + 7)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::ArtistTitleRemaining => {
+            if remaining_idx? < song_format.len() - 3 {
+                Some(&song_format[(remaining_idx? + 3)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::ArtistTitle => {
+            if title_idx < song_format.len() - 7 {
+                Some(&song_format[(title_idx + 7)..song_format.len()])
+            } else {
+                None
+            }
+        }
+        ParseOrder::TitleArtist => {
+            if artist_idx < song_format.len() - 8 {
+                Some(&song_format[(artist_idx + 8)..song_format.len()])
+            } else {
+                None
+            }
+        }
+    };
+
+    let delimiter_1 = match parse_order {
+        ParseOrder::RemainingArtistTitle => &song_format[(remaining_idx? + 3)..artist_idx],
+        ParseOrder::RemainingTitleArtist => &song_format[(remaining_idx? + 3)..title_idx],
+        ParseOrder::TitleArtistRemaining => &song_format[(title_idx + 7)..artist_idx],
+        ParseOrder::TitleRemainingArtist => &song_format[(title_idx + 7)..remaining_idx?],
+        ParseOrder::ArtistRemainingTitle => &song_format[(artist_idx + 8)..remaining_idx?],
+        ParseOrder::ArtistTitleRemaining => &song_format[(artist_idx + 8)..title_idx],
+        ParseOrder::ArtistTitle => &song_format[(artist_idx + 8)..title_idx],
+        ParseOrder::TitleArtist => &song_format[(title_idx + 7)..artist_idx],
+    };
+
+    let delimiter_2 = match parse_order {
+        ParseOrder::RemainingArtistTitle => Some(&song_format[(artist_idx + 8)..title_idx]),
+        ParseOrder::RemainingTitleArtist => Some(&song_format[(title_idx + 7)..artist_idx]),
+        ParseOrder::TitleArtistRemaining => Some(&song_format[(artist_idx + 8)..remaining_idx?]),
+        ParseOrder::TitleRemainingArtist => Some(&song_format[(remaining_idx? + 3)..artist_idx]),
+        ParseOrder::ArtistRemainingTitle => Some(&song_format[(remaining_idx? + 3)..title_idx]),
+        ParseOrder::ArtistTitleRemaining => Some(&song_format[(title_idx + 7)..remaining_idx?]),
+        ParseOrder::ArtistTitle => None,
+        ParseOrder::TitleArtist => None,
+    };
+
+    if let Some(start) = delimiter_start {
+        file_name = file_name.replacen(start, "", 1);
+    }
+
+    if let Some(end) = delimiter_end {
+        file_name = file_name[..(file_name.len() - end.len())].to_string();
+    }
+
+    let delimiter_1_idx = file_name.find(delimiter_1)?;
+    let delimiter_2_idx = if let Some(delimiter) = delimiter_2 {
+        Some(
+            file_name[(delimiter_1_idx + delimiter_1.len())..].find(delimiter)?
+                + delimiter_1_idx
+                + delimiter_1.len(),
+        )
     } else {
         None
-    }
+    };
+
+    let (title, artist) = match parse_order {
+        ParseOrder::RemainingArtistTitle => {
+            let artist = &file_name[(delimiter_1_idx + delimiter_1.len())..delimiter_2_idx?];
+            let title = &file_name[(delimiter_2_idx? + delimiter_2?.len())..];
+            (title, artist)
+        }
+        ParseOrder::RemainingTitleArtist => {
+            let title = &file_name[(delimiter_1_idx + delimiter_1.len())..delimiter_2_idx?];
+            let artist = &file_name[(delimiter_2_idx? + delimiter_2?.len())..];
+            (title, artist)
+        }
+        ParseOrder::TitleArtistRemaining => {
+            let title = &file_name[..delimiter_1_idx];
+            let artist = &file_name[(delimiter_1_idx + delimiter_1.len())..delimiter_2_idx?];
+            (title, artist)
+        }
+        ParseOrder::TitleRemainingArtist => {
+            let title = &file_name[..delimiter_1_idx];
+            let artist = &file_name[(delimiter_2_idx? + delimiter_2?.len())..];
+            (title, artist)
+        }
+        ParseOrder::ArtistRemainingTitle => {
+            let artist = &file_name[..delimiter_1_idx];
+            let title = &file_name[(delimiter_2_idx? + delimiter_2?.len())..];
+            (title, artist)
+        }
+        ParseOrder::ArtistTitleRemaining => {
+            let artist = &file_name[..delimiter_1_idx];
+            let title = &file_name[(delimiter_1_idx + delimiter_1.len())..delimiter_2_idx?];
+            (title, artist)
+        }
+        ParseOrder::ArtistTitle => {
+            let artist = &file_name[..delimiter_1_idx];
+            let title = &file_name[(delimiter_1_idx + delimiter_1.len())..];
+            (title, artist)
+        }
+        ParseOrder::TitleArtist => {
+            let title = &file_name[..delimiter_1_idx];
+            let artist = &file_name[(delimiter_1_idx + delimiter_1.len())..];
+            (title, artist)
+        }
+    };
+
+    Some(ParseResult {
+        title: title.to_owned(),
+        artist: artist.to_owned(),
+    })
 }
 
 pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -322,22 +568,53 @@ mod tests {
 
     #[test]
     fn test_clean_song_parse() {
-        let parse_string = "ABCD001 - The Testers - Testing 123";
-        let parsed_file = song_parse(parse_string);
-        assert_eq!(parsed_file, Some(("The Testers", "Testing 123")));
+        let formats = vec![
+            "[Artist] - [Title]",
+            "[Artist] - [Title] - [*]",
+            "[Artist] - [*] - [Title]",
+            "[Title] - [Artist]",
+            "[Title] - [Artist] - [*]",
+            "[Title] - [*] - [Artist]",
+            "[*] - [Artist] - [Title]",
+            "[*] - [Title] - [Artist]",
+            "asdf[*] - [Artist] - [Title]asdf",
+            "asdf[*]asdf[Title]asdf[Artist]asdf",
+            "asdf[Title]asdf[Artist]asdf[*]asdf",
+        ];
+        let titles = vec![
+            "Artist - Title",
+            "Artist - Title - *",
+            "Artist - * - Title",
+            "Title - Artist",
+            "Title - Artist - *",
+            "Title - * - Artist",
+            "* - Artist - Title",
+            "* - Title - Artist",
+            "asdf* - Artist - Titleasdf",
+            "asdf*asdfTitleasdfArtistasdf",
+            "asdfTitleasdfArtistasdf*asdf",
+        ];
+        for (idx, title) in titles.iter().enumerate() {
+            let result =
+                std::panic::catch_unwind(|| song_parse(title, formats[idx]).unwrap()).unwrap();
+            assert_eq!(result.artist, "Artist");
+            assert_eq!(result.title, "Title");
+        }
     }
 
     #[test]
     fn test_unclean_song_parse() {
-        let parse_string = "ABCD001 The Testers - Testing 123";
-        let parsed_file = song_parse(parse_string);
-        assert_eq!(parsed_file, None);
+        let song = "ABCD001 The Testers - Testing 123";
+        let format = "[*] - [Artist] - [Title]";
+        let result = std::panic::catch_unwind(|| song_parse(song, format));
+        assert!(result.unwrap().is_none());
     }
 
     #[test]
     fn test_kfile_new() {
         let path = PathBuf::from("ABCD001 - The Testers - Testing 123");
-        let kfile = Kfile::new(&path);
+        let config = Config::default();
+        let kfile = Kfile::new(&path, &config.song_format);
         let _kfile = Kfile {
             mp3_path: PathBuf::from("ABCD001 - The Testers - Testing 123.mp3"),
             cdg_path: PathBuf::from("ABCD001 - The Testers - Testing 123.cdg"),
@@ -355,8 +632,7 @@ mod tests {
         let config = Config {
             song_path,
             data_path,
-            no_collection_update: false,
-            use_web_player: false,
+            ..Config::default()
         };
         let initialize = CollectionDB::initialize(&config.data_path);
         assert!(initialize.is_ok());
