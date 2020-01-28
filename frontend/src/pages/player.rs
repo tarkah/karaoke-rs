@@ -22,6 +22,12 @@ pub enum Msg {
 pub struct Props {
     #[props(required)]
     pub port_ws: u16,
+    #[props(required)]
+    pub fullscreen: bool,
+    #[props(required)]
+    pub scale: f32,
+    #[props(required)]
+    pub disable_background: bool,
 }
 
 pub struct PlayerPage {
@@ -29,6 +35,9 @@ pub struct PlayerPage {
     #[allow(dead_code)]
     player_agent: Box<dyn Bridge<player::PlayerAgent>>,
     port_ws: u16,
+    fullscreen: bool,
+    scale: f32,
+    disable_background: bool,
     window: Window,
     player_canvas: Option<HtmlCanvasElement>,
     hidden_canvas: Option<HtmlCanvasElement>,
@@ -59,6 +68,9 @@ impl Component for PlayerPage {
             window,
             player_agent,
             port_ws: props.port_ws,
+            fullscreen: props.fullscreen,
+            scale: props.scale,
+            disable_background: props.disable_background,
             player_canvas: None,
             hidden_canvas: None,
             player_render_context: None,
@@ -194,36 +206,58 @@ impl PlayerPage {
     }
 
     fn render_frame(&mut self, image_data: ImageData, background: (f32, f32, f32, f32)) {
+        let x = if self.fullscreen {
+            0.0
+        } else {
+            self.width as f64 / 2.0 - (300.0 * self.scale as f64) / 2.0
+        };
+        let y = if self.fullscreen {
+            0.0
+        } else {
+            self.height as f64 / 2.0 - (216.0 * self.scale as f64) / 2.0
+        };
+        let width = if self.fullscreen {
+            self.width as f64
+        } else {
+            300.0 * self.scale as f64
+        };
+        let height = if self.fullscreen {
+            self.height as f64
+        } else {
+            216.0 * self.scale as f64
+        };
+
         let player_render_context = self.player_render_context.as_ref().unwrap();
         let hidden_render_context = self.hidden_render_context.as_ref().unwrap();
         let hidden_canvas = self.hidden_canvas.as_ref().unwrap();
 
         let _ = hidden_render_context.put_image_data(&image_data, 0.0, 0.0);
 
-        let color: JsString = format!(
-            "rgba({}, {}, {}, {})",
-            background.0, background.1, background.2, background.3
-        )
-        .as_str()
-        .into();
-        player_render_context.set_fill_style(&color);
-        player_render_context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
+        if !self.fullscreen {
+            let color = if self.disable_background {
+                format!("rgba({}, {}, {}, {})", 0, 0, 0, 1)
+            } else {
+                format!(
+                    "rgba({}, {}, {}, {})",
+                    background.0, background.1, background.2, background.3
+                )
+            };
+
+            let color: JsString = color.as_str().into();
+            player_render_context.set_fill_style(&color);
+            player_render_context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
+        }
 
         let color: JsString = format!("rgba({}, {}, {}, {})", 0, 0, 0, 1).as_str().into();
         player_render_context.set_fill_style(&color);
-        player_render_context.fill_rect(
-            self.width as f64 / 2.0 - (300.0 * 1.5) / 2.0,
-            self.height as f64 / 2.0 - (216.0 * 1.5) / 2.0,
-            300.0 * 1.5,
-            216.0 * 1.5,
-        );
+        player_render_context.fill_rect(x, y, width, height);
 
         let _ = player_render_context.draw_image_with_html_canvas_element_and_dw_and_dh(
             &hidden_canvas,
-            self.width as f64 / 2.0 - (300.0 * 1.5) / 2.0,
-            self.height as f64 / 2.0 - (216.0 * 1.5) / 2.0,
-            300.0 * 1.5,
-            216.0 * 1.5,
+            x,
+            y,
+            width,
+            height,
         );
     }
 
