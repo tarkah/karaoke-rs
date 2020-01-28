@@ -105,7 +105,7 @@ pub enum SortDirection {
     Desc,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Config {
     pub song_path: PathBuf,
     pub data_path: PathBuf,
@@ -114,4 +114,12 @@ pub struct Config {
     pub port: u16,
     pub port_ws: u16,
     pub song_format: String,
+    pub player: PlayerConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PlayerConfig {
+    pub fullscreen: bool,
+    pub scale: f32,
+    pub disable_background: bool,
 }

@@ -7,6 +7,7 @@ use karaoke::{
     collection::Kfile,
     embed::Assets,
     queue::PLAY_QUEUE,
+    CONFIG,
 };
 use rodio::{Sink, Source};
 use std::{
@@ -192,14 +193,32 @@ impl Player {
         let cdg = File::open(&kfile.cdg_path)?;
         let mut scsi = cdg::SubchannelStreamIter::new(BufReader::new(cdg));
 
-        //Size of cdg render texture, scaled at 1.5x
+        //Size of cdg render texture, scaled at 1.5x (default)
         let cdg_x: f32 = 300.0;
         let cdg_y: f32 = 216.0;
-        let cdg_scale = 1.5;
+        let cdg_scale = CONFIG.player.scale;
+        let cdg_width = if CONFIG.player.fullscreen {
+            self.dimensions.width as f32
+        } else {
+            cdg_x * cdg_scale
+        };
+        let cdg_height = if CONFIG.player.fullscreen {
+            self.dimensions.height as f32
+        } else {
+            cdg_y * cdg_scale
+        };
 
         //Calculate center cdg image
-        let cdg_x_center = self.dimensions.width as f32 * 0.5 - (cdg_x * cdg_scale) * 0.5;
-        let cdg_y_center = self.dimensions.height as f32 * 0.5 - (cdg_y * cdg_scale) * 0.5;
+        let cdg_x_center = if CONFIG.player.fullscreen {
+            0.0
+        } else {
+            self.dimensions.width as f32 * 0.5 - cdg_width * 0.5
+        };
+        let cdg_y_center = if CONFIG.player.fullscreen {
+            0.0
+        } else {
+            self.dimensions.height as f32 * 0.5 - cdg_height * 0.5
+        };
 
         //Counter and frequency for rainbow effect
         let mut i: f32 = 0.0;
@@ -261,14 +280,20 @@ impl Player {
             if sectors_since > 0 {
                 let mut frame = self.display.draw();
 
-                //Get background color from rainbow cycle, clear to window
-                let background_data = rainbow_cycle(&mut i, size);
-                frame.clear_color(
-                    background_data.0,
-                    background_data.1,
-                    background_data.2,
-                    background_data.3,
-                );
+                if !CONFIG.player.fullscreen {
+                    //Get background color from rainbow cycle, clear to window
+                    let background_data = if CONFIG.player.disable_background {
+                        (0.0, 0.0, 0.0, 1.0)
+                    } else {
+                        rainbow_cycle(&mut i, size)
+                    };
+                    frame.clear_color(
+                        background_data.0,
+                        background_data.1,
+                        background_data.2,
+                        background_data.3,
+                    );
+                }
 
                 //Get updated cdg frame from interpreter, copy into RGBA image,
                 //update to texture, blit texture to frame surface with rectangle dimensions
@@ -281,8 +306,8 @@ impl Player {
                 let cdg_rect = glium::BlitTarget {
                     left: cdg_x_center as u32,
                     bottom: cdg_y_center as u32,
-                    width: (cdg_x * cdg_scale) as i32,
-                    height: (cdg_y * cdg_scale) as i32,
+                    width: cdg_width as i32,
+                    height: cdg_height as i32,
                 };
                 cdg_image.as_surface().blit_whole_color_to(
                     &frame,

@@ -36,7 +36,7 @@ lazy_static! {
     };
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Config {
     pub song_path: PathBuf,
     pub data_path: PathBuf,
@@ -45,6 +45,7 @@ pub struct Config {
     pub port: u16,
     pub port_ws: u16,
     pub song_format: String,
+    pub player: PlayerConfig,
 }
 
 impl Default for Config {
@@ -57,6 +58,24 @@ impl Default for Config {
             port: 8080,
             port_ws: 9000,
             song_format: "[*] - [Artist] - [Title]".to_owned(),
+            player: PlayerConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PlayerConfig {
+    pub fullscreen: bool,
+    pub scale: f32,
+    pub disable_background: bool,
+}
+
+impl Default for PlayerConfig {
+    fn default() -> PlayerConfig {
+        PlayerConfig {
+            fullscreen: false,
+            scale: 1.5,
+            disable_background: false,
         }
     }
 }

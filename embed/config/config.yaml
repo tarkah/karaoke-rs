@@ -36,3 +36,16 @@
 # Default format is: "[*] - [Artist] - [Title]"
 #
 #song_format: "[*] - [Artist] - [Title]"
+
+# Settings to customize look of the player
+#
+#player:
+
+  # Set lyrics to fit entire screen
+  #fullscreen: false
+  
+  # Scale lyrics by this factor, default is 1.5
+  #scale: 1.5
+
+  # Disables the rainbow background. Will be black instead.
+  #disable_background: false
