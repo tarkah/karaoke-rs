@@ -15,16 +15,16 @@
 #data_path: C:/Users/{username}/AppData/Roaming/karaoke-rs
 
 # Disable collection refresh on startup (helpful if collection is huge and not changing)
-#no_collection_update: false
+no_collection_update: false
 
 # Use web player instead of native player (playable from any browser)
-#use_web_player: false
+use_web_player: false
 
 # Website port
-#port: 8080
+port: 8080
 
 # Websocket port (for web-player)
-#port_ws: 9000
+port_ws: 9000
 
 # Specify format of song file name in collection. If no id3 tags are found, it will
 # attempt to parse song name for title and artist using the following format.
@@ -35,17 +35,17 @@
 #
 # Default format is: "[*] - [Artist] - [Title]"
 #
-#song_format: "[*] - [Artist] - [Title]"
+song_format: "[*] - [Artist] - [Title]"
 
 # Settings to customize look of the player
 #
-#player:
+player:
 
   # Set lyrics to fit entire screen
-  #fullscreen: false
+  fullscreen: false
   
   # Scale lyrics by this factor, default is 1.5
-  #scale: 1.5
+  scale: 1.5
 
   # Disables the rainbow background. Will be black instead.
-  #disable_background: false
+  disable_background: false
