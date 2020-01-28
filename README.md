@@ -35,6 +35,8 @@ Your karaoke collection can be browsed and queued from a self served website and
 
 ### Build from Source
 - Build frontend
+
+First [install wasm-pack](https://rustwasm.github.io/wasm-pack/installer/), then run:
 ```sh
 cd frontend
 npm install
