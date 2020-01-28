@@ -56,7 +56,7 @@ fn run() -> Result<(), Error> {
 
 fn get_config() -> Result<Config, failure::Error> {
     let matches = App::new("karoake-rs")
-        .version("0.8.1")
+        .version("0.9.0")
         .author("tarkah <admin@tarkah.dev>")
         .about("A simple, network enabled karaoke player in Rust")
         .arg(
