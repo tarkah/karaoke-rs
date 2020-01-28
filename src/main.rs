@@ -98,6 +98,21 @@ fn get_config() -> Result<Config, failure::Error> {
                 .long("use-web-player")
                 .help("Use web player instead of native player"),
         )
+        .arg(
+            Arg::with_name("port")
+                .short("p")
+                .long("port")
+                .value_name("PORT")
+                .help("Specify website port")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("port-ws")
+                .long("port-ws")
+                .value_name("PORT_WS")
+                .help("Specify a websocket port when using the web player feature")
+                .takes_value(true),
+        )
         .get_matches();
 
     let config_path: Option<PathBuf>;
@@ -136,6 +151,16 @@ fn get_config() -> Result<Config, failure::Error> {
     } else {
         None
     };
+    let port = if matches.is_present("port") {
+        Some(matches.value_of("port").unwrap().parse::<u16>().unwrap())
+    } else {
+        None
+    };
+    let port_ws = if matches.is_present("port-ws") {
+        Some(matches.value_of("port-ws").unwrap().parse::<u16>().unwrap())
+    } else {
+        None
+    };
 
     //Load config file from config_path, override config with supplied Args, if applicable
     load_config(
@@ -144,6 +169,8 @@ fn get_config() -> Result<Config, failure::Error> {
         data_path,
         refresh_collection,
         use_web_player,
+        port,
+        port_ws,
     )
 }
 

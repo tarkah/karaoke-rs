@@ -20,6 +20,12 @@
 # Use web player instead of native player (playable from any browser)
 #use_web_player: false
 
+# Website port
+#port: 8080
+
+# Websocket port (for web-player)
+#port_ws: 9000
+
 # Specify format of song file name in collection. If no id3 tags are found, it will
 # attempt to parse song name for title and artist using the following format.
 #

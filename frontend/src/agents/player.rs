@@ -42,6 +42,11 @@ pub enum Msg {
 }
 
 #[derive(Serialize, Deserialize)]
+pub enum Request {
+    Port(u16),
+}
+
+#[derive(Serialize, Deserialize)]
 pub enum Response {
     RenderFrame {
         cdg_frame: Vec<u8>,
@@ -82,25 +87,18 @@ pub struct PlayerAgent {
 impl Agent for PlayerAgent {
     type Reach = Job;
     type Message = Msg;
-    type Input = ();
+    type Input = Request;
     type Output = Response;
 
     fn create(link: AgentLink<Self>) -> Self {
         let callback = link.callback(Msg::ApiResponse);
         let api_agent = api::ApiAgent::bridge(callback);
 
-        let mut ws_service = WebSocketService::new();
-        let callback = link.callback(Msg::WsReceived);
-        let notification = link.callback(Msg::WsStatus);
-        let ws_task = ws_service
-            .connect(&get_ws_host(), callback, notification)
-            .ok();
-
         PlayerAgent {
             link,
             api_agent,
             bridged_component: None,
-            ws_task,
+            ws_task: None,
             timeout_service: TimeoutService::new(),
             timeout_task: None,
             render_service: RenderService::new(),
@@ -266,7 +264,20 @@ impl Agent for PlayerAgent {
         }
     }
 
-    fn handle_input(&mut self, _: Self::Input, _: HandlerId) {}
+    fn handle_input(&mut self, msg: Self::Input, _: HandlerId) {
+        match msg {
+            Request::Port(port) => {
+                let mut ws_service = WebSocketService::new();
+                let callback = self.link.callback(Msg::WsReceived);
+                let notification = self.link.callback(Msg::WsStatus);
+                let ws_task = ws_service
+                    .connect(&get_ws_host(port), callback, notification)
+                    .ok();
+
+                self.ws_task = ws_task;
+            }
+        }
+    }
 }
 
 impl PlayerAgent {
@@ -331,13 +342,13 @@ impl PlayerAgent {
     }
 }
 
-fn get_ws_host() -> String {
+fn get_ws_host(port: u16) -> String {
     let window = web_sys::window().unwrap();
     let location = window.location();
 
     let hostname = location.hostname().unwrap();
 
-    format!("ws://{}:9000", hostname)
+    format!("ws://{}:{}", hostname, port)
 }
 
 fn get_audio_context() -> Option<AudioContext> {

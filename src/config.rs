@@ -42,6 +42,8 @@ pub struct Config {
     pub data_path: PathBuf,
     pub no_collection_update: bool,
     pub use_web_player: bool,
+    pub port: u16,
+    pub port_ws: u16,
     pub song_format: String,
 }
 
@@ -52,6 +54,8 @@ impl Default for Config {
             data_path: DATA_DIR.to_path_buf(),
             no_collection_update: false,
             use_web_player: false,
+            port: 8080,
+            port_ws: 9000,
             song_format: "[*] - [Artist] - [Title]".to_owned(),
         }
     }
@@ -83,6 +87,8 @@ pub fn load_config(
     data_path: Option<PathBuf>,
     refresh_collection: Option<bool>,
     use_web_player: Option<bool>,
+    port: Option<u16>,
+    port_ws: Option<u16>,
 ) -> Result<Config, failure::Error> {
     //If config_path supplied (from Arg), use that over default location
     let config_file: PathBuf;
@@ -115,6 +121,12 @@ pub fn load_config(
     if let Some(bool) = use_web_player {
         config.use_web_player = bool;
     }
+    if let Some(port) = port {
+        config.port = port;
+    }
+    if let Some(port) = port_ws {
+        config.port_ws = port;
+    }
     log::info!("Using song dir: {:?}", config.song_path);
     log::info!("Using data dir: {:?}", config.data_path);
     log::info!(
@@ -135,7 +147,16 @@ mod tests {
     fn test_create_default_config() {
         let config_path = PathBuf::from("tests/test_data/config.yaml");
         assert!(!config_path.is_file());
-        let config = load_config(Some(config_path.clone()), None, None, None, None).unwrap();
+        let config = load_config(
+            Some(config_path.clone()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
         assert!(config_path.is_file());
         assert_eq!(config, Config::default());
 
@@ -155,12 +176,16 @@ mod tests {
             Some(data_path),
             Some(true),
             Some(true),
+            Some(8000),
+            Some(9090),
         )
         .unwrap();
         let _config = Config {
             song_path: PathBuf::from("test/test_data/songs"),
             data_path: PathBuf::from("test/test_data"),
             use_web_player: true,
+            port: 8000,
+            port_ws: 9090,
             ..Config::default()
         };
         assert_eq!(config, _config);

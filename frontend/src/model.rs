@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
@@ -36,8 +37,8 @@ pub enum DataType {
     Queue(Vec<Song>),
     #[serde(rename = "next_song")]
     PlayerNextSong { mp3: String, cdg: String },
-    #[serde(rename = "player_active")]
-    PlayerActive(bool),
+    #[serde(rename = "config")]
+    Config(Config),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -102,4 +103,15 @@ pub enum SortDirection {
     Asc,
     #[serde(rename = "desc")]
     Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct Config {
+    pub song_path: PathBuf,
+    pub data_path: PathBuf,
+    pub no_collection_update: bool,
+    pub use_web_player: bool,
+    pub port: u16,
+    pub port_ws: u16,
+    pub song_format: String,
 }

@@ -3,6 +3,7 @@ use crossbeam_channel::Sender;
 use karaoke::{
     channel::{WorkerCommand, WORKER_CHANNEL},
     collection::{calculate_hash, Collection, Kfile, COLLECTION},
+    config::Config,
     queue::PLAY_QUEUE,
     CONFIG,
 };
@@ -71,8 +72,8 @@ enum DataType {
     Queue(Vec<ResponseSong>),
     #[serde(rename = "next_song")]
     NextSong { mp3: String, cdg: String },
-    #[serde(rename = "player_active")]
-    PlayerActive(bool),
+    #[serde(rename = "config")]
+    Config(Config),
 }
 
 #[derive(Deserialize)]
@@ -338,12 +339,12 @@ fn api_stop(worker_sender: web::Data<Sender<WorkerCommand>>) -> HttpResponse {
     })
 }
 
-fn api_player() -> HttpResponse {
-    let active = CONFIG.use_web_player;
+fn api_config() -> HttpResponse {
+    let config = CONFIG.clone();
 
     HttpResponse::Ok().json(Response {
         status: "ok",
-        data: Some(DataType::PlayerActive(active)),
+        data: Some(DataType::Config(config)),
         ..Response::default()
     })
 }
@@ -413,7 +414,7 @@ fn get_server_port() -> u16 {
     std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
-        .unwrap_or(8080)
+        .unwrap_or(CONFIG.port)
 }
 
 pub fn run() -> std::io::Result<()> {
@@ -443,7 +444,7 @@ pub fn run() -> std::io::Result<()> {
             .service(web::resource("/api/songs").route(web::get().to(api_songs)))
             .service(web::resource("/api/artists").route(web::get().to(api_artists)))
             .service(web::resource("/api/queue").route(web::get().to(api_queue)))
-            .service(web::resource("/api/player").route(web::get().to(api_player)))
+            .service(web::resource("/api/config").route(web::get().to(api_config)))
             .service(web::resource("/api/player/next").route(web::get().to(api_player_next)))
             .service(web::resource("/api/player/ended").route(web::post().to(api_player_ended)))
             .service(actix_files::Files::new("/songs/", song_path))

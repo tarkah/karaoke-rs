@@ -1,4 +1,4 @@
-use crate::{agents::api, components::toast_container::ToastContainer, pages::*};
+use crate::{agents::api, components::toast_container::ToastContainer, model::Config, pages::*};
 
 use log::trace;
 use yew::prelude::*;
@@ -28,7 +28,7 @@ pub struct Model {
     router_agent: Box<dyn Bridge<RouteAgent>>,
     current_route: Option<String>,
     api_agent: Box<dyn Bridge<api::ApiAgent>>,
-    player_active: bool,
+    config: Option<Config>,
 }
 
 pub enum Msg {
@@ -52,12 +52,12 @@ impl Component for Model {
             router_agent,
             current_route: None,
             api_agent,
-            player_active: false,
+            config: None,
         }
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        self.api_agent.send(api::Request::PlayerActive);
+        self.api_agent.send(api::Request::Config);
         false
     }
 
@@ -67,8 +67,8 @@ impl Component for Model {
                 self.current_route = Some(route);
             }
             Msg::ApiResponse(response) => {
-                if let api::Response::Success(api::ResponseData::PlayerActive(active)) = response {
-                    self.player_active = active;
+                if let api::Response::Success(api::ResponseData::Config(config)) = response {
+                    self.config = Some(config);
                 }
             }
         }
@@ -91,6 +91,11 @@ impl Component for Model {
 impl Model {
     fn view_header(&self) -> Html {
         let current_route = self.current_route.clone().unwrap_or_else(|| "/".into());
+        let player_active = if let Some(config) = &self.config {
+            config.use_web_player
+        } else {
+            false
+        };
 
         trace!("Current route is: {}", current_route);
 
@@ -111,7 +116,7 @@ impl Model {
                         classes={ if current_route=="/queue" { "header__navigation-item--active" } else { "header__navigation-item" }}>
                             { "Queue" }</RouterAnchor<AppRoute>>
                     {
-                        if self.player_active {
+                        if player_active {
                             html! {
                                 <RouterAnchor<AppRoute> route=AppRoute::Player
                                     classes={ if current_route=="/player" { "header__navigation-item--active" } else { "header__navigation-item" }}>
@@ -127,6 +132,12 @@ impl Model {
     }
 
     fn view_page(&self) -> Html {
+        let port_ws = if let Some(config) = &self.config {
+            config.port_ws
+        } else {
+            9000
+        };
+
         html! {
             <Router<AppRoute, ()>
                 render = Router::render(move |switch: AppRoute| {
@@ -136,7 +147,7 @@ impl Model {
                         AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
                         AppRoute::Artists => html!{<ArtistsPage />},
                         AppRoute::Queue => html!{<QueuePage />},
-                        AppRoute::Player => html!{<PlayerPage />},
+                        AppRoute::Player => html!{<PlayerPage port_ws=port_ws />},
                         AppRoute::NotFound(Permissive(None)) => html!{"Page not found"},
                         AppRoute::NotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)},
                         _ => html!{"Page not found"},
