@@ -18,10 +18,17 @@ pub enum Msg {
     Error(Error),
 }
 
+#[derive(Properties, Clone)]
+pub struct Props {
+    #[props(required)]
+    pub port_ws: u16,
+}
+
 pub struct PlayerPage {
     link: ComponentLink<Self>,
     #[allow(dead_code)]
     player_agent: Box<dyn Bridge<player::PlayerAgent>>,
+    port_ws: u16,
     window: Window,
     player_canvas: Option<HtmlCanvasElement>,
     hidden_canvas: Option<HtmlCanvasElement>,
@@ -35,9 +42,9 @@ pub struct PlayerPage {
 
 impl Component for PlayerPage {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let mut resize_service = ResizeService::new();
         let callback = link.callback(Msg::Resize);
         let resize_task = resize_service.register(callback);
@@ -51,6 +58,7 @@ impl Component for PlayerPage {
             link,
             window,
             player_agent,
+            port_ws: props.port_ws,
             player_canvas: None,
             hidden_canvas: None,
             player_render_context: None,
@@ -93,6 +101,8 @@ impl Component for PlayerPage {
     }
 
     fn mounted(&mut self) -> ShouldRender {
+        self.player_agent.send(player::Request::Port(self.port_ws));
+
         if let Err(e) = self.on_mounted() {
             self.link.send_message(Msg::Error(e));
         }

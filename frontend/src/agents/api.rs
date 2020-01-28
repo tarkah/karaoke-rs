@@ -1,7 +1,7 @@
 use crate::{
     agents::toast::{Msg as ToastAgentMsg, ToastAgent},
     components::toast::{ToastBody, ToastStatus},
-    model::{ApiResponse, Artist, DataType, PostSong, RequestParams, Song},
+    model::{ApiResponse, Artist, Config, DataType, PostSong, RequestParams, Song},
 };
 use failure::{format_err, Error};
 use log::trace;
@@ -36,7 +36,7 @@ pub enum Request {
     Stop,
     NextSong,
     ClearQueue,
-    PlayerActive,
+    Config,
     PlayerNextSong,
     FetchMp3(String),
     FetchCdg(String),
@@ -53,7 +53,7 @@ pub enum RequestType {
     Stop,
     NextSong,
     ClearQueue,
-    PlayerActive,
+    Config,
     PlayerNextSong,
     FetchMp3,
     FetchCdg,
@@ -77,7 +77,7 @@ pub enum ResponseData {
         total_pages: u32,
     },
     Queue(Vec<Song>),
-    PlayerActive(bool),
+    Config(Config),
     PlayerNextSong {
         mp3: String,
         cdg: String,
@@ -173,8 +173,8 @@ impl Agent for ApiAgent {
                 let fetch_task = self.send_command(who, RequestType::Stop, None);
                 self.fetch_tasks.push(fetch_task);
             }
-            Request::PlayerActive => {
-                let fetch_task = self.get_data(who, RequestType::PlayerActive, None);
+            Request::Config => {
+                let fetch_task = self.get_data(who, RequestType::Config, None);
                 self.fetch_tasks.push(fetch_task);
             }
             Request::PlayerNextSong => {
@@ -221,7 +221,7 @@ impl ApiAgent {
                             total_pages: data.total_pages.unwrap_or(0),
                         },
                         DataType::Queue(songs) => ResponseData::Queue(songs),
-                        DataType::PlayerActive(active) => ResponseData::PlayerActive(active),
+                        DataType::Config(config) => ResponseData::Config(config),
                         DataType::PlayerNextSong { mp3, cdg } => {
                             ResponseData::PlayerNextSong { mp3, cdg }
                         }
@@ -396,7 +396,7 @@ impl RequestType {
             RequestType::GetSongs => "songs",
             RequestType::GetArtists => "artists",
             RequestType::GetQueue => "queue",
-            RequestType::PlayerActive => "player",
+            RequestType::Config => "config",
             RequestType::PlayerNextSong => "player/next",
             RequestType::Ended => "player/ended",
             _ => "",

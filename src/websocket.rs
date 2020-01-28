@@ -2,7 +2,7 @@ use crossbeam_channel::{bounded, select};
 use failure::{bail, format_err, Error};
 use karaoke::{
     channel::{LiveCommand, WebsocketCommand},
-    log_error,
+    log_error, CONFIG,
 };
 use multiqueue::BroadcastReceiver;
 use serde::{Deserialize, Serialize};
@@ -24,9 +24,12 @@ impl WsMessage {
 }
 
 pub fn start_ws_server(receiver: BroadcastReceiver<LiveCommand>) -> Result<(), Error> {
-    let mut server = Server::bind("0.0.0.0:9000")?;
+    let mut server = Server::bind(&format!("0.0.0.0:{}", CONFIG.port_ws))?;
     server.set_nonblocking(true)?;
-    log::info!("Websocket server has launched from ws://0.0.0.0:9000");
+    log::info!(
+        "Websocket server has launched from ws://0.0.0.0:{}",
+        CONFIG.port_ws
+    );
 
     loop {
         if let Ok(request) = server.accept() {
