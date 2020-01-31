@@ -132,37 +132,35 @@ impl Model {
     }
 
     fn view_page(&self) -> Html {
-        let (port_ws, fullscreen, scale, disable_background) = if let Some(config) = &self.config {
-            (
-                config.port_ws,
-                config.player.fullscreen,
-                config.player.scale,
-                config.player.disable_background,
-            )
-        } else {
-            (9000, false, 1.5, false)
-        };
+        if let Some(config) = &self.config {
+            let port_ws = config.port_ws;
+            let fullscreen = config.player.fullscreen;
+            let scale = config.player.scale;
+            let disable_background = config.player.disable_background;
 
-        html! {
-            <Router<AppRoute, ()>
-                render = Router::render(move |switch: AppRoute| {
-                    match switch {
-                        AppRoute::Index => html!{<IndexPage />},
-                        AppRoute::Songs => html! {<SongsPage />},
-                        AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
-                        AppRoute::Artists => html!{<ArtistsPage />},
-                        AppRoute::Queue => html!{<QueuePage />},
-                        AppRoute::Player => html!{<PlayerPage port_ws=port_ws fullscreen=fullscreen
-                            scale=scale disable_background=disable_background/>},
-                        AppRoute::NotFound(Permissive(None)) => html!{"Page not found"},
-                        AppRoute::NotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)},
-                        _ => html!{"Page not found"},
-                    }
-                })
-                redirect = Router::redirect(|route: Route| {
-                    AppRoute::NotFound(Permissive(Some(route.route)))
-                })
-            />
+            html! {
+                <Router<AppRoute, ()>
+                    render = Router::render(move |switch: AppRoute| {
+                        match switch {
+                            AppRoute::Index => html!{<IndexPage />},
+                            AppRoute::Songs => html! {<SongsPage />},
+                            AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
+                            AppRoute::Artists => html!{<ArtistsPage />},
+                            AppRoute::Queue => html!{<QueuePage />},
+                            AppRoute::Player => html!{<PlayerPage port_ws=port_ws fullscreen=fullscreen
+                                scale=scale disable_background=disable_background/>},
+                            AppRoute::NotFound(Permissive(None)) => html!{"Page not found"},
+                            AppRoute::NotFound(Permissive(Some(missed_route))) => html!{format!("Page '{}' not found", missed_route)},
+                            _ => html!{"Page not found"},
+                        }
+                    })
+                    redirect = Router::redirect(|route: Route| {
+                        AppRoute::NotFound(Permissive(Some(route.route)))
+                    })
+                />
+            }
+        } else {
+            html! {}
         }
     }
 }
