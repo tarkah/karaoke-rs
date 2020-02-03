@@ -1,5 +1,5 @@
 use super::api;
-use failure::Error;
+use anyhow::Error;
 use gloo_events::EventListener;
 use image::{GenericImage, RgbaImage};
 use js_sys::Uint8ClampedArray;

@@ -3,7 +3,7 @@ use crate::{
     components::toast::{ToastBody, ToastStatus},
     model::{ApiResponse, Artist, Config, DataType, PostSong, RequestParams, Song},
 };
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use log::trace;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
@@ -249,7 +249,7 @@ impl ApiAgent {
             .body(Nothing)
             .unwrap();
 
-        self.fetch_service.fetch(request, callback)
+        self.fetch_service.fetch(request, callback).unwrap()
     }
 
     fn send_command(
@@ -299,7 +299,7 @@ impl ApiAgent {
                 .unwrap()
         };
 
-        self.fetch_service.fetch(request, callback)
+        self.fetch_service.fetch(request, callback).unwrap()
     }
 
     fn fetch_file(
@@ -341,7 +341,7 @@ impl ApiAgent {
         let request = fetch::Request::get(&format!("/songs/{}", encoded))
             .body(Nothing)
             .unwrap();
-        self.fetch_service.fetch_binary(request, callback)
+        self.fetch_service.fetch_binary(request, callback).unwrap()
     }
 }
 

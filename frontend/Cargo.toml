@@ -9,8 +9,9 @@ version = "0.1.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-yew = "0.11"
-yew-router = "0.8.1"
+#yew = { path = "../../external/yew" } #"0.11"
+yew = {git = "https://github.com/yewstack/yew", branch = "web-sys", features = ["web_sys","agent","services"]}
+yew-router = {git = "https://github.com/tarkah/yew_router", branch = "web-sys", features = ["web_sys"]}
 
 cdg = "0.1"
 cdg_renderer = "0.3"
@@ -18,7 +19,7 @@ image = "0.22"
 
 log = "0.4"
 web_logger = "0.2"
-failure = "0.1"
+anyhow = "1.0"
 serde = { version = "1", features = ['derive'] }
 serde_urlencoded = "0.5"
 percent-encoding = "2.1"

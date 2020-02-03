@@ -1,5 +1,5 @@
 use crate::agents::player;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use js_sys::JsString;
 use log::{error, trace};
 use wasm_bindgen::JsCast;
