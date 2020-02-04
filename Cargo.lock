@@ -2389,9 +2389,9 @@ dependencies = [
 
 [[package]]
 name = "openssl"
-version = "0.10.27"
+version = "0.10.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e176a45fedd4c990e26580847a525e39e16ec32ac78957dbf62ded31b3abfd6f"
+checksum = "973293749822d7dd6370d6da1e523b0d1db19f06c459134c658b2a4261378b52"
 dependencies = [
  "bitflags 1.2.1",
  "cfg-if",
@@ -3010,9 +3010,9 @@ dependencies = [
 
 [[package]]
 name = "schannel"
-version = "0.1.16"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87f550b06b6cba9c8b8be3ee73f391990116bf527450d2556e9b9ce263b9a021"
+checksum = "507a9e6e8ffe0a4e0ebb9a10293e62fdf7657c06f1b8bb07a8fcf697d2abf295"
 dependencies = [
  "lazy_static",
  "winapi 0.3.8",
@@ -4220,7 +4220,7 @@ dependencies = [
 [[package]]
 name = "yew-router"
 version = "0.9.0"
-source = "git+https://github.com/tarkah/yew_router?branch=web-sys#2e93940c9164f1efe1d4ddeebb88784abd7918fc"
+source = "git+https://github.com/tarkah/yew_router?branch=web-sys#f5a2e8acac2ada94ff66e29023e9942f5f5e4d92"
 dependencies = [
  "cfg-if",
  "cfg-match",
@@ -4241,7 +4241,7 @@ dependencies = [
 [[package]]
 name = "yew-router-macro"
 version = "0.9.0"
-source = "git+https://github.com/tarkah/yew_router?branch=web-sys#2e93940c9164f1efe1d4ddeebb88784abd7918fc"
+source = "git+https://github.com/tarkah/yew_router?branch=web-sys#f5a2e8acac2ada94ff66e29023e9942f5f5e4d92"
 dependencies = [
  "proc-macro2 1.0.8",
  "quote 1.0.2",
@@ -4252,7 +4252,7 @@ dependencies = [
 [[package]]
 name = "yew-router-route-parser"
 version = "0.9.0"
-source = "git+https://github.com/tarkah/yew_router?branch=web-sys#2e93940c9164f1efe1d4ddeebb88784abd7918fc"
+source = "git+https://github.com/tarkah/yew_router?branch=web-sys#f5a2e8acac2ada94ff66e29023e9942f5f5e4d92"
 dependencies = [
  "log 0.4.8",
  "nom 5.1.0",
