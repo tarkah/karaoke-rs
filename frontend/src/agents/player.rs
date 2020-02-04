@@ -119,6 +119,10 @@ impl Agent for PlayerAgent {
         self.bridged_component = Some(id);
     }
 
+    fn destroy(&mut self) {
+        self.cleanup();
+    }
+
     fn update(&mut self, msg: Self::Message) {
         match msg {
             Msg::MainLoop => {
@@ -339,6 +343,19 @@ impl PlayerAgent {
             Duration::from_millis(1000),
             self.link.callback(|_| Msg::MainLoop),
         ));
+    }
+
+    fn cleanup(&mut self) {
+        if let Some(node) = self.buffer_source_node.as_mut() {
+            let _ = node.disconnect();
+        }
+
+        if let Some(context) = self.audio_context.as_mut() {
+            let future = JsFuture::from(context.close().unwrap());
+            spawn_local(async {
+                let _ = future.await;
+            });
+        }
     }
 }
 
