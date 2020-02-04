@@ -3,7 +3,7 @@
 
 use log::{trace, Level};
 use wasm_bindgen::prelude::*;
-use web_logger::Config;
+use wasm_logger::Config;
 
 mod agents;
 mod app;
@@ -16,21 +16,15 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub fn run_app() -> Result<(), JsValue> {
-    console_error_panic_hook::set_once();
-
     let log_config = if cfg!(debug_assertions) {
-        Config {
-            level: Level::Trace,
-        }
+        Config::new(Level::Trace)
     } else {
-        Config { level: Level::Info }
+        Config::new(Level::Info)
     };
 
-    web_logger::custom_init(log_config);
+    wasm_logger::init(log_config);
 
     trace!("Initializing yew...");
-    yew::initialize();
-
     yew::start_app::<app::Model>();
     Ok(())
 }

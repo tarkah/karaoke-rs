@@ -1,5 +1,5 @@
 use super::api;
-use failure::Error;
+use anyhow::Error;
 use gloo_events::EventListener;
 use image::{GenericImage, RgbaImage};
 use js_sys::Uint8ClampedArray;
@@ -117,6 +117,10 @@ impl Agent for PlayerAgent {
 
     fn connected(&mut self, id: HandlerId) {
         self.bridged_component = Some(id);
+    }
+
+    fn destroy(&mut self) {
+        self.cleanup();
     }
 
     fn update(&mut self, msg: Self::Message) {
@@ -339,6 +343,19 @@ impl PlayerAgent {
             Duration::from_millis(1000),
             self.link.callback(|_| Msg::MainLoop),
         ));
+    }
+
+    fn cleanup(&mut self) {
+        if let Some(node) = self.buffer_source_node.as_mut() {
+            let _ = node.disconnect();
+        }
+
+        if let Some(context) = self.audio_context.as_mut() {
+            let future = JsFuture::from(context.close().unwrap());
+            spawn_local(async {
+                let _ = future.await;
+            });
+        }
     }
 }
 
