@@ -18,14 +18,13 @@ cdg_renderer = "0.3"
 image = "0.22"
 
 log = "0.4"
-web_logger = "0.2"
+wasm-logger = "0.2"
 anyhow = "1.0"
 serde = { version = "1", features = ['derive'] }
 serde_urlencoded = "0.5"
 percent-encoding = "2.1"
 
 wee_alloc = "0.4"
-console_error_panic_hook = "0.1"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
