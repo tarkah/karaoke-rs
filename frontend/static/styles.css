@@ -84,11 +84,6 @@ a:hover {
   color: white;
 }
 
-.artist-link {
-  text-decoration: underline;
-  cursor: pointer;
-}
-
 .align-items-center {
   display: flex;
   align-items: center;

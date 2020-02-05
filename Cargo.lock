@@ -4220,7 +4220,7 @@ dependencies = [
 [[package]]
 name = "yew-router"
 version = "0.9.0"
-source = "git+https://github.com/tarkah/yew_router?branch=web-sys#f5a2e8acac2ada94ff66e29023e9942f5f5e4d92"
+source = "git+https://github.com/tarkah/yew_router?branch=web-sys#9d871e8d33499db792514ee5cf6b4a615b7adb1b"
 dependencies = [
  "cfg-if",
  "cfg-match",
@@ -4241,7 +4241,7 @@ dependencies = [
 [[package]]
 name = "yew-router-macro"
 version = "0.9.0"
-source = "git+https://github.com/tarkah/yew_router?branch=web-sys#f5a2e8acac2ada94ff66e29023e9942f5f5e4d92"
+source = "git+https://github.com/tarkah/yew_router?branch=web-sys#9d871e8d33499db792514ee5cf6b4a615b7adb1b"
 dependencies = [
  "proc-macro2 1.0.8",
  "quote 1.0.2",
@@ -4252,7 +4252,7 @@ dependencies = [
 [[package]]
 name = "yew-router-route-parser"
 version = "0.9.0"
-source = "git+https://github.com/tarkah/yew_router?branch=web-sys#f5a2e8acac2ada94ff66e29023e9942f5f5e4d92"
+source = "git+https://github.com/tarkah/yew_router?branch=web-sys#9d871e8d33499db792514ee5cf6b4a615b7adb1b"
 dependencies = [
  "log 0.4.8",
  "nom 5.1.0",
