@@ -3,7 +3,7 @@ use anyhow::Error;
 use gloo_events::EventListener;
 use image::{GenericImage, RgbaImage};
 use js_sys::Uint8ClampedArray;
-use log::trace;
+use log::{trace, warn};
 use serde::{Deserialize, Serialize};
 use std::{f32::consts, io::Cursor, time::Duration};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -190,14 +190,20 @@ impl Agent for PlayerAgent {
 
                     let promise = audio_context.decode_audio_data(&array_buffer).unwrap();
 
-                    let callback = self.link.callback(Msg::PlayMp3);
+                    let success_callback = self.link.callback(Msg::PlayMp3);
+                    let error_callback = self.link.callback(|_| Msg::NotPlayingLoop);
 
                     spawn_local(async move {
                         let future = JsFuture::from(promise);
-                        let decoded: AudioBuffer = future.await.unwrap().unchecked_into();
-                        trace!("Audio data decoded into Audio Buffer");
+                        if let Ok(value) = future.await {
+                            if let Ok(decoded) = value.dyn_into::<AudioBuffer>() {
+                                trace!("Audio data decoded into Audio Buffer");
 
-                        callback.emit(decoded);
+                                success_callback.emit(decoded);
+                            }
+                        }
+                        warn!("Audio data could not be decoded. Remove song from queue.");
+                        error_callback.emit(());
                     });
                 }
             }

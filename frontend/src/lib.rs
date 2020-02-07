@@ -19,7 +19,7 @@ pub fn run_app() -> Result<(), JsValue> {
     let log_config = if cfg!(debug_assertions) {
         Config::new(Level::Trace)
     } else {
-        Config::new(Level::Info)
+        Config::new(Level::Info).module_prefix("karaoke_rs_frontend")
     };
 
     wasm_logger::init(log_config);
