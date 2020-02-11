@@ -200,6 +200,7 @@ impl Agent for PlayerAgent {
                                 trace!("Audio data decoded into Audio Buffer");
 
                                 success_callback.emit(decoded);
+                                return;
                             }
                         }
                         warn!("Audio data could not be decoded. Remove song from queue.");
