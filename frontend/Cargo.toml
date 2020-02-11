@@ -15,7 +15,7 @@ yew-router = {git = "https://github.com/tarkah/yew_router", branch = "web-sys", 
 
 cdg = "0.1"
 cdg_renderer = "0.3"
-image = "0.22"
+image = { version = "0.22", default-features = false }
 
 log = "0.4"
 wasm-logger = "0.2"
