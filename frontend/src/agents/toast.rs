@@ -52,7 +52,7 @@ impl Agent for ToastAgent {
     fn handle_input(&mut self, msg: Self::Input, _: HandlerId) {
         match msg {
             Msg::NewToast(toast) => {
-                self.update(Msg::NewToast(toast));
+                self.link.callback(Msg::NewToast).emit(toast);
             }
         }
     }

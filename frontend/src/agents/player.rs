@@ -131,9 +131,9 @@ impl Agent for PlayerAgent {
                 trace!("Main loop...");
 
                 if self.playing {
-                    self.update(Msg::PlayingLoop);
+                    self.link.callback(|_| Msg::PlayingLoop).emit(());
                 } else {
-                    self.update(Msg::NotPlayingLoop);
+                    self.link.callback(|_| Msg::NotPlayingLoop).emit(());
                 }
             }
             Msg::PlayingLoop => {
@@ -168,7 +168,7 @@ impl Agent for PlayerAgent {
             Msg::Ended => {
                 trace!("Song ended...");
                 self.api_agent.send(api::Request::Ended);
-                self.update(Msg::Stop);
+                self.link.callback(|_| Msg::Stop).emit(());
             }
             Msg::GetSong => {
                 self.api_agent.send(api::Request::PlayerNextSong);
@@ -237,18 +237,18 @@ impl Agent for PlayerAgent {
             }
             Msg::ApiResponse(response) => match response {
                 api::Response::Success(api::ResponseData::PlayerNextSong { mp3, cdg }) => {
-                    self.update(Msg::FetchMp3(mp3));
-                    self.update(Msg::FetchCdg(cdg));
+                    self.link.callback(Msg::FetchMp3).emit(mp3);
+                    self.link.callback(Msg::FetchCdg).emit(cdg);
                 }
                 api::Response::Success(api::ResponseData::FileMp3(bytes)) => {
                     log::trace!("Got mp3, is {} bytes", bytes.len());
                     self.mp3 = FileStatus::Fetched(bytes);
-                    self.update(Msg::DecodeMp3);
+                    self.link.callback(|_| Msg::DecodeMp3).emit(());
                 }
                 api::Response::Success(api::ResponseData::FileCdg(bytes)) => {
                     log::trace!("Got cdg, is {} bytes", bytes.len());
                     self.cdg = FileStatus::Fetched(bytes);
-                    self.update(Msg::StartCdgPlayer);
+                    self.link.callback(|_| Msg::StartCdgPlayer).emit(());
                 }
                 _ => {}
             },
@@ -257,10 +257,10 @@ impl Agent for PlayerAgent {
                     log::trace!("Websocket Received command: {}", data.command);
                     match data.command.as_str() {
                         "stop" => {
-                            self.update(Msg::Stop);
+                            self.link.callback(|_| Msg::Stop).emit(());
                         }
                         "hello" => {
-                            self.update(Msg::MainLoop);
+                            self.link.callback(|_| Msg::MainLoop).emit(());
                         }
                         _ => {}
                     }
@@ -378,7 +378,7 @@ impl PlayerAgent {
                 }
 
                 if self.cdg == FileStatus::None && self.mp3 == FileStatus::None {
-                    self.update(Msg::GetSong);
+                    self.link.callback(|_| Msg::GetSong).emit(());
                     trace!("Getting next song...");
                 }
             }
