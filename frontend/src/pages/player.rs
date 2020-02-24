@@ -3,7 +3,7 @@ use anyhow::{format_err, Error};
 use js_sys::JsString;
 use log::{error, trace};
 use wasm_bindgen::JsCast;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData, Window};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlDivElement, ImageData, Window};
 use yew::{
     prelude::*,
     services::{
@@ -15,6 +15,7 @@ use yew::{
 pub enum Msg {
     Resize(WindowDimensions),
     Player(player::Response),
+    UserInputReceived,
     Error(Error),
 }
 
@@ -104,7 +105,15 @@ impl Component for PlayerPage {
                 player::Response::ClearCanvas => {
                     self.clear_canvas();
                 }
+                player::Response::UserInputNeeded => {
+                    self.show_modal();
+                }
             },
+            Msg::UserInputReceived => {
+                self.hide_modal();
+
+                self.player_agent.send(player::Request::UserInputReceived);
+            }
             Msg::Error(e) => {
                 error!("ERROR: {}", e);
             }
@@ -127,6 +136,12 @@ impl Component for PlayerPage {
                 <canvas id="player"/>
                 <canvas id="hidden" width="300" height="216" />
                 <img id="player-background" src="player_background.png" />
+                <div id="input-modal" class="modal">
+                    <div class="modal-content">
+                        <span onclick=self.link.callback(|_| Msg::UserInputReceived) class="modal-close">{ "x" }</span>
+                        <p>{ "Close to start player" }</p>
+                    </div>
+                </div>
             </>
         }
     }
@@ -265,6 +280,24 @@ impl PlayerPage {
         let player_render_context = self.player_render_context.as_ref().unwrap();
         player_render_context.clear_rect(0.0, 0.0, self.width as f64, self.height as f64);
     }
+
+    fn show_modal(&mut self) {
+        if let Some(modal) = get_modal(&self.window, "input-modal") {
+            let style = &modal.style();
+            let _ = style.set_property("display", "block");
+        }
+
+        trace!("Modal shown");
+    }
+
+    fn hide_modal(&mut self) {
+        if let Some(modal) = get_modal(&self.window, "input-modal") {
+            let style = &modal.style();
+            let _ = style.set_property("display", "none");
+        }
+
+        trace!("Modal closed");
+    }
 }
 
 fn get_window() -> Window {
@@ -272,5 +305,9 @@ fn get_window() -> Window {
 }
 
 fn get_canvas(window: &Window, id: &str) -> Option<HtmlCanvasElement> {
+    Some(window.document()?.get_element_by_id(id)?.unchecked_into())
+}
+
+fn get_modal(window: &Window, id: &str) -> Option<HtmlDivElement> {
     Some(window.document()?.get_element_by_id(id)?.unchecked_into())
 }

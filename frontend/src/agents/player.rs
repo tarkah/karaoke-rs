@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{f32::consts, io::Cursor, time::Duration};
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
-use web_sys::{AudioBuffer, AudioBufferSourceNode, AudioContext, AudioNode};
+use web_sys::{AudioBuffer, AudioBufferSourceNode, AudioContext, AudioContextState, AudioNode};
 use yew::{
     format::Json,
     services::{
@@ -44,6 +44,7 @@ pub enum Msg {
 #[derive(Serialize, Deserialize)]
 pub enum Request {
     Port(u16),
+    UserInputReceived,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -53,6 +54,7 @@ pub enum Response {
         background: (f32, f32, f32, f32),
     },
     ClearCanvas,
+    UserInputNeeded,
 }
 
 #[derive(PartialEq)]
@@ -287,6 +289,24 @@ impl Agent for PlayerAgent {
 
                 self.ws_task = ws_task;
             }
+            Request::UserInputReceived => {
+                trace!("User Input Received");
+
+                if let Ok(promise) = self.audio_context.as_ref().unwrap().resume() {
+                    let future = JsFuture::from(promise);
+
+                    spawn_local(async move {
+                        let _ = future.await;
+                    });
+
+                    trace!("Audio Context resumed");
+
+                    self.timeout_task = Some(self.timeout_service.spawn(
+                        Duration::from_millis(1000),
+                        self.link.callback(|_| Msg::MainLoop),
+                    ));
+                }
+            }
         }
     }
 }
@@ -323,27 +343,45 @@ impl PlayerAgent {
         if self.audio_context.is_none() {
             self.audio_context = get_audio_context();
             trace!("Got audio context");
+
+            self.timeout_task = Some(self.timeout_service.spawn(
+                Duration::from_millis(1000),
+                self.link.callback(|_| Msg::MainLoop),
+            ));
+
+            return;
         }
 
-        if self.buffer_source_node.is_none() && self.audio_context.is_some() {
-            self.buffer_source_node = get_buffer_source(&self.audio_context.as_ref().unwrap());
+        if self.audio_context.is_some() {
+            if self.audio_context.as_ref().unwrap().state() == AudioContextState::Suspended {
+                trace!("AudioContext created in suspended state, need user input");
 
-            let callback = self.link.callback(|_| Msg::Ended);
-            let onended = EventListener::new(
-                &self.buffer_source_node.as_ref().unwrap().as_ref(),
-                "ended",
-                move |_| {
-                    callback.emit(());
-                },
-            );
-            self.buffer_source_node_onended = Some(onended);
+                self.link
+                    .respond(self.bridged_component.unwrap(), Response::UserInputNeeded);
 
-            trace!("Got buffer source");
-        }
+                return;
+            } else {
+                if self.buffer_source_node.is_none() {
+                    self.buffer_source_node =
+                        get_buffer_source(&self.audio_context.as_ref().unwrap());
 
-        if self.cdg == FileStatus::None && self.mp3 == FileStatus::None {
-            self.update(Msg::GetSong);
-            trace!("Getting next song...");
+                    let callback = self.link.callback(|_| Msg::Ended);
+                    let onended = EventListener::new(
+                        &self.buffer_source_node.as_ref().unwrap().as_ref(),
+                        "ended",
+                        move |_| {
+                            callback.emit(());
+                        },
+                    );
+                    self.buffer_source_node_onended = Some(onended);
+                    trace!("Got buffer source");
+                }
+
+                if self.cdg == FileStatus::None && self.mp3 == FileStatus::None {
+                    self.update(Msg::GetSong);
+                    trace!("Getting next song...");
+                }
+            }
         }
 
         self.timeout_task = Some(self.timeout_service.spawn(
