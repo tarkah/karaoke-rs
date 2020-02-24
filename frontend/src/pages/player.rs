@@ -138,8 +138,9 @@ impl Component for PlayerPage {
                 <img id="player-background" src="player_background.png" />
                 <div id="input-modal" class="modal">
                     <div class="modal-content">
-                        <span onclick=self.link.callback(|_| Msg::UserInputReceived) class="modal-close">{ "x" }</span>
-                        <p>{ "Close to start player" }</p>
+                        <p>{ "Get ready for some karaoke!" }</p>
+                        <button onclick=self.link.callback(|_| Msg::UserInputReceived)
+                                class="modal-close">{ "Load Player" }</button>
                     </div>
                 </div>
             </>
