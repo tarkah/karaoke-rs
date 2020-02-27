@@ -146,9 +146,13 @@ impl Agent for PlayerAgent {
                 self.render_task = None;
 
                 trace!("Stopping player...");
+
                 self.buffer_source_node_onended = None;
-                let _ = self.buffer_source_node.as_ref().unwrap().disconnect();
-                self.buffer_source_node = None;
+
+                if let Some(node) = self.buffer_source_node.as_ref() {
+                    let _ = node.disconnect();
+                    self.buffer_source_node = None;
+                };
 
                 self.mp3 = FileStatus::None;
                 self.cdg = FileStatus::None;
@@ -211,22 +215,27 @@ impl Agent for PlayerAgent {
                 }
             }
             Msg::PlayMp3(audio) => {
-                self.buffer_source_node
-                    .as_ref()
-                    .unwrap()
-                    .set_buffer(Some(&audio));
+                if let Some(node) = self.buffer_source_node.as_ref() {
+                    node.set_buffer(Some(&audio));
 
-                let source_node: &AudioNode = self.buffer_source_node.as_ref().unwrap();
-                let destination = self.audio_context.as_ref().unwrap().destination();
-                let destination_node: &AudioNode = destination.as_ref();
-                let connect_result = source_node.connect_with_audio_node(destination_node);
+                    let source_node: &AudioNode = node;
 
-                let play_result = self.buffer_source_node.as_ref().unwrap().start();
+                    let destination = self.audio_context.as_ref().unwrap().destination();
+                    let destination_node: &AudioNode = destination.as_ref();
 
-                if play_result.is_ok() && connect_result.is_ok() {
-                    self.playing = true;
-                    self.song_start_time = self.audio_context.as_ref().unwrap().current_time();
-                    trace!("Audio is playing");
+                    let connect_result = source_node.connect_with_audio_node(destination_node);
+                    let play_result = node.start();
+
+                    if play_result.is_ok() && connect_result.is_ok() {
+                        self.playing = true;
+                        self.song_start_time = self.audio_context.as_ref().unwrap().current_time();
+
+                        trace!("Audio is playing");
+                    }
+                } else {
+                    trace!("Buffer node doesn't exist while trying to play decoded audio. Resetting player...");
+
+                    self.link.callback(|_| Msg::Stop).emit(());
                 }
             }
             Msg::StartCdgPlayer => {
