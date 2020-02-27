@@ -29,7 +29,6 @@ module.exports = (env, argv) => {
       new WasmPackPlugin({
         crateDirectory: ".",
         extraArgs: "--no-typescript",
-        forceMode: "production", //Player fails under dev but works under production... not sure why?
       })
     ],
     watch: argv.mode !== 'production'

@@ -120,7 +120,6 @@ impl Agent for ApiAgent {
         match msg {
             Msg::RemoveFetchTasks => {
                 self.fetch_tasks.retain(|task| task.is_active());
-                trace!("# of active fetch tasks: {}", self.fetch_tasks.len());
             }
             Msg::Return {
                 who,
@@ -128,7 +127,7 @@ impl Agent for ApiAgent {
                 response,
             } => {
                 if let Some(toast) = response.toast(request_type) {
-                    self.update(Msg::CreateToast(toast));
+                    self.link.callback(Msg::CreateToast).emit(toast);
                 }
 
                 self.link.respond(who, response);
