@@ -34,6 +34,7 @@ pub enum Msg {
     FetchMp3(String),
     FetchCdg(String),
     DecodeMp3,
+    DecodeError,
     PlayMp3(AudioBuffer),
     StartCdgPlayer,
     ApiResponse(api::Response),
@@ -55,6 +56,7 @@ pub enum Response {
     },
     ClearCanvas,
     UserInputNeeded,
+    DecodeError,
 }
 
 #[derive(PartialEq)]
@@ -193,7 +195,7 @@ impl Agent for PlayerAgent {
                     let promise = audio_context.decode_audio_data(&array_buffer).unwrap();
 
                     let success_callback = self.link.callback(Msg::PlayMp3);
-                    let error_callback = self.link.callback(|_| Msg::NotPlayingLoop);
+                    let error_callback = self.link.callback(|_| Msg::DecodeError);
 
                     spawn_local(async move {
                         let future = JsFuture::from(promise);
@@ -209,6 +211,12 @@ impl Agent for PlayerAgent {
                         error_callback.emit(());
                     });
                 }
+            }
+            Msg::DecodeError => {
+                self.link
+                    .respond(self.bridged_component.unwrap(), Response::DecodeError);
+
+                self.link.callback(|_| Msg::NotPlayingLoop).emit(());
             }
             Msg::PlayMp3(audio) => {
                 self.buffer_source_node

@@ -37,6 +37,8 @@ features = [
     'Element',
     'HtmlCanvasElement',
     'HtmlDivElement',
+    'HtmlButtonElement',
+    'HtmlParagraphElement',
     'Window',
     'CanvasRenderingContext2d',
     'Location',
