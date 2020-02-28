@@ -3,7 +3,10 @@ use anyhow::{format_err, Error};
 use js_sys::JsString;
 use log::{error, trace};
 use wasm_bindgen::JsCast;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlDivElement, ImageData, Window};
+use web_sys::{
+    CanvasRenderingContext2d, HtmlButtonElement, HtmlCanvasElement, HtmlDivElement,
+    HtmlParagraphElement, ImageData, Window,
+};
 use yew::{
     prelude::*,
     services::{
@@ -106,7 +109,13 @@ impl Component for PlayerPage {
                     self.clear_canvas();
                 }
                 player::Response::UserInputNeeded => {
-                    self.show_modal();
+                    self.show_modal("Get ready for some karaoke!", "Load Player");
+                }
+                player::Response::DecodeError => {
+                    self.show_modal(
+                        "Could not decode song, please remove it from the queue.",
+                        "   OK   ",
+                    );
                 }
             },
             Msg::UserInputReceived => {
@@ -138,9 +147,9 @@ impl Component for PlayerPage {
                 <img id="player-background" src="player_background.png" />
                 <div id="input-modal" class="modal">
                     <div class="modal-content">
-                        <p>{ "Get ready for some karaoke!" }</p>
+                        <p id="modal-paragraph"></p>
                         <button onclick=self.link.callback(|_| Msg::UserInputReceived)
-                                class="modal-close">{ "Load Player" }</button>
+                                class="modal-close" id="modal-button"></button>
                     </div>
                 </div>
             </>
@@ -282,10 +291,18 @@ impl PlayerPage {
         player_render_context.clear_rect(0.0, 0.0, self.width as f64, self.height as f64);
     }
 
-    fn show_modal(&mut self) {
+    fn show_modal(&mut self, text: &str, button_text: &str) {
         if let Some(modal) = get_modal(&self.window, "input-modal") {
-            let style = &modal.style();
+            let style = modal.style();
             let _ = style.set_property("display", "block");
+        }
+
+        if let Some(paragraph) = get_modal_paragraph(&self.window, "modal-paragraph") {
+            paragraph.set_inner_text(text);
+        }
+
+        if let Some(button) = get_modal_button(&self.window, "modal-button") {
+            button.set_inner_text(button_text);
         }
 
         trace!("Modal shown");
@@ -310,5 +327,13 @@ fn get_canvas(window: &Window, id: &str) -> Option<HtmlCanvasElement> {
 }
 
 fn get_modal(window: &Window, id: &str) -> Option<HtmlDivElement> {
+    Some(window.document()?.get_element_by_id(id)?.unchecked_into())
+}
+
+fn get_modal_paragraph(window: &Window, id: &str) -> Option<HtmlParagraphElement> {
+    Some(window.document()?.get_element_by_id(id)?.unchecked_into())
+}
+
+fn get_modal_button(window: &Window, id: &str) -> Option<HtmlButtonElement> {
     Some(window.document()?.get_element_by_id(id)?.unchecked_into())
 }
