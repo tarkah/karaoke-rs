@@ -24,13 +24,9 @@ pub enum Msg {
 
 #[derive(Properties, Clone)]
 pub struct Props {
-    #[props(required)]
     pub port_ws: u16,
-    #[props(required)]
     pub fullscreen: bool,
-    #[props(required)]
     pub scale: f32,
-    #[props(required)]
     pub disable_background: bool,
 }
 

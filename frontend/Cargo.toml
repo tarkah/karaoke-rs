@@ -9,9 +9,8 @@ version = "0.1.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-#yew = { path = "../../external/yew" } #"0.11"
-yew = {git = "https://github.com/yewstack/yew", branch = "web-sys", features = ["web_sys","agent","services"]}
-yew-router = {git = "https://github.com/tarkah/yew_router", branch = "web-sys", features = ["web_sys"]}
+yew = { version = "0.13", features = ["web_sys","agent","services"] }
+yew-router = { version = "0.10", branch = "web-sys", features = ["web_sys"] }
 
 cdg = "0.1"
 cdg_renderer = "0.3"

@@ -19,7 +19,6 @@ pub enum Msg {
 
 #[derive(Properties, Clone)]
 pub struct Props {
-    #[props(required)]
     pub artist_id: u64,
 }
 

@@ -301,7 +301,7 @@ impl Agent for PlayerAgent {
                 let callback = self.link.callback(Msg::WsReceived);
                 let notification = self.link.callback(Msg::WsStatus);
                 let ws_task = ws_service
-                    .connect(&get_ws_host(port), callback, notification)
+                    .connect_text(&get_ws_host(port), callback, notification)
                     .ok();
 
                 self.ws_task = ws_task;

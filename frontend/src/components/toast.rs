@@ -34,7 +34,6 @@ pub struct ToastBody {
 
 #[derive(Clone, Properties)]
 pub struct Props {
-    #[props(required)]
     pub body: ToastBody,
 }
 

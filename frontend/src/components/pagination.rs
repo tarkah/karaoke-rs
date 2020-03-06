@@ -8,7 +8,6 @@ pub enum Msg {
 
 #[derive(Properties, Clone)]
 pub struct Props {
-    #[props(required)]
     pub onupdate: Callback<u32>,
     pub total_pages: u32,
     pub current_page: u32,
