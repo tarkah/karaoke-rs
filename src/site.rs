@@ -2,7 +2,10 @@ use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
 use crossbeam_channel::Sender;
 use karaoke::{
     channel::{WorkerCommand, WORKER_CHANNEL},
-    collection::{calculate_hash, Collection, Kfile, COLLECTION},
+    collection::{
+        add_favorite, calculate_hash, remove_favorite, Collection, Database, FavoritesDB, Kfile,
+        COLLECTION,
+    },
     config::Config,
     queue::PLAY_QUEUE,
     CONFIG,
@@ -28,6 +31,7 @@ struct ResponseSong {
     name: String,
     artist_id: u64,
     artist_name: String,
+    favorite: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -83,6 +87,7 @@ struct Params {
     artist_id: Option<u64>,
     sort_key: Option<SortKey>,
     sort_direction: Option<SortDirection>,
+    favorites_only: Option<bool>,
 }
 
 #[derive(Deserialize, Clone, Copy)]
@@ -105,9 +110,12 @@ enum SortDirection {
 
 fn api_songs(
     collection: web::Data<Collection>,
+    favorites: web::Data<Box<FavoritesDB>>,
     params: web::Query<Params>,
 ) -> Result<web::Json<Response>, Error> {
     let songs = collection.get_ref().by_song.clone();
+    let favorites = favorites.data().unwrap_or_default();
+
     let mut songs: Vec<ResponseSong> = songs
         .into_iter()
         .map(|(id, song)| ResponseSong {
@@ -115,6 +123,14 @@ fn api_songs(
             name: song.song,
             artist_id: song.artist_hash,
             artist_name: song.artist,
+            favorite: favorites.contains(&id),
+        })
+        .filter(|song| {
+            if params.favorites_only.unwrap_or_default() {
+                song.favorite
+            } else {
+                true
+            }
         })
         .collect();
 
@@ -250,8 +266,13 @@ fn api_artists(
     Ok(web::Json(response))
 }
 
-fn api_queue(queue: web::Data<Arc<Mutex<Vec<Kfile>>>>) -> Result<web::Json<Response>, Error> {
+fn api_queue(
+    queue: web::Data<Arc<Mutex<Vec<Kfile>>>>,
+    favorites: web::Data<Box<FavoritesDB>>,
+) -> Result<web::Json<Response>, Error> {
     let queue = queue.get_ref().as_ref().lock().unwrap().clone();
+    let favorites = favorites.data().unwrap_or_default();
+
     let queue: Vec<ResponseSong> = queue
         .into_iter()
         .map(|kfile| {
@@ -262,6 +283,7 @@ fn api_queue(queue: web::Data<Arc<Mutex<Vec<Kfile>>>>) -> Result<web::Json<Respo
                 name: kfile.song,
                 artist_name: kfile.artist,
                 artist_id: kfile.artist_hash,
+                favorite: favorites.contains(&id),
             }
         })
         .collect();
@@ -349,6 +371,54 @@ fn api_config() -> HttpResponse {
     })
 }
 
+fn api_add_favorite(
+    form: web::Form<Song>,
+    favorites_db: web::Data<Box<FavoritesDB>>,
+) -> HttpResponse {
+    let hash = form.hash;
+
+    let result = add_favorite(&*favorites_db, hash);
+
+    if let Err(e) = result {
+        return HttpResponse::Ok().json(Response {
+            status: "error",
+            error_message: Some(e.to_string()),
+            ..Response::default()
+        });
+    }
+
+    log::info!("Song added to favorites: {}", hash);
+
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
+}
+
+fn api_remove_favorite(
+    form: web::Form<Song>,
+    favorites_db: web::Data<Box<FavoritesDB>>,
+) -> HttpResponse {
+    let hash = form.hash;
+
+    let result = remove_favorite(&*favorites_db, hash);
+
+    if let Err(e) = result {
+        return HttpResponse::Ok().json(Response {
+            status: "error",
+            error_message: Some(e.to_string()),
+            ..Response::default()
+        });
+    }
+
+    log::info!("Song removed from favorites: {}", hash);
+
+    HttpResponse::Ok().json(Response {
+        status: "ok",
+        ..Response::default()
+    })
+}
+
 fn api_player_next(queue: web::Data<Arc<Mutex<Vec<Kfile>>>>) -> HttpResponse {
     let _queue = queue.lock().unwrap();
     if _queue.len() == 0 {
@@ -431,10 +501,14 @@ pub fn run() -> std::io::Result<()> {
 
         let song_path = CONFIG.song_path.clone();
 
+        let favorites_db =
+            FavoritesDB::initialize(&CONFIG.data_path).expect("Couldn't create favorites db");
+
         App::new()
             .data(collection)
             .data(worker_sender)
             .data(play_queue)
+            .data(favorites_db)
             .wrap(middleware::Logger::default()) // enable logger
             .service(web::resource("/api/add").route(web::post().to(api_add)))
             .service(web::resource("/api/playnow").route(web::post().to(api_playnow)))
@@ -447,6 +521,10 @@ pub fn run() -> std::io::Result<()> {
             .service(web::resource("/api/config").route(web::get().to(api_config)))
             .service(web::resource("/api/player/next").route(web::get().to(api_player_next)))
             .service(web::resource("/api/player/ended").route(web::post().to(api_player_ended)))
+            .service(web::resource("/api/favorites/add").route(web::post().to(api_add_favorite)))
+            .service(
+                web::resource("/api/favorites/remove").route(web::post().to(api_remove_favorite)),
+            )
             .service(actix_files::Files::new("/songs/", song_path))
             .service(actix_files::Files::new("/", static_path).index_file("index.html"))
             .default_service(

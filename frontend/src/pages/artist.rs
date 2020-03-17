@@ -14,6 +14,7 @@ pub enum Msg {
     TablePageUpdate(u32),
     SortUpdate(SortKey),
     Search(String),
+    Favorite((bool, u64)),
     ApiResponse(api::Response),
 }
 
@@ -74,6 +75,7 @@ impl Component for ArtistPage {
                     artist_id: Some(self.artist_id),
                     sort_key: self.sort_key,
                     sort_direction: self.sort_direction,
+                    ..RequestParams::default()
                 };
                 self.api_agent.send(api::Request::GetSongs(params));
             }
@@ -115,6 +117,14 @@ impl Component for ArtistPage {
                 trace!("Search Input: {}", value);
                 self.search = Some(value);
                 self.page_selection = None;
+                self.update(Msg::GetSongs);
+            }
+            Msg::Favorite((favorite, id)) => {
+                if favorite {
+                    self.api_agent.send(api::Request::RemoveFavorite(id));
+                } else {
+                    self.api_agent.send(api::Request::AddFavorite(id));
+                }
                 self.update(Msg::GetSongs);
             }
             Msg::ApiResponse(response) => match response {
@@ -195,6 +205,7 @@ impl ArtistPage {
 
     fn view_row(&self, song: Song) -> Html {
         let song_id = song.id;
+        let favorite = song.favorite;
 
         html! {
             <tr>
@@ -206,6 +217,10 @@ impl ArtistPage {
                 <td>
                     <button onclick=self.link.callback(move |_| Msg::PlayNow(song_id)) class="button button-table"
                     role="button"  aria-pressed="true">{ "Play" }</button>
+                </td>
+                <td class="heart-center">
+                    <button onclick=self.link.callback(move |_| Msg::Favorite((favorite, song_id))) class="button button-table"
+                        role="button" aria-pressed="true">{ self.view_favorite(favorite) }</button>
                 </td>
             </tr>
         }
@@ -227,6 +242,7 @@ impl ArtistPage {
                                         class=self.sort_class(SortKey::Song)>{ "Song" }</th>
                                     <th></th>
                                     <th></th>
+                                    <th><div class="heart-header heart-center">{ "🤍" }</div></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -246,6 +262,14 @@ impl ArtistPage {
             }
         } else {
             html! {}
+        }
+    }
+
+    fn view_favorite(&self, favorite: bool) -> &str {
+        if favorite {
+            "♥️"
+        } else {
+            "🤍"
         }
     }
 }

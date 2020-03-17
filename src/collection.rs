@@ -27,14 +27,19 @@ lazy_static! {
 }
 
 pub type CollectionDB = FileDatabase<HashMap<u64, Kfile>, Yaml>;
+pub type FavoritesDB = FileDatabase<HashSet<u64>, Yaml>;
 
-pub trait Custom {
+pub trait Database {
+    type Data;
+
     fn initialize(path: &PathBuf) -> Result<Box<Self>, failure::Error>;
     fn refresh(&self, path: &PathBuf) -> Result<(), failure::Error>;
-    fn get_collection(&self) -> Result<Collection, failure::Error>;
+    fn data(&self) -> Result<Self::Data, failure::Error>;
 }
 
-impl Custom for CollectionDB {
+impl Database for CollectionDB {
+    type Data = Collection;
+
     //If file doesn't exist, create default. Load db from file.
     fn initialize(path: &PathBuf) -> Result<Box<CollectionDB>, failure::Error> {
         let db: CollectionDB;
@@ -115,7 +120,7 @@ impl Custom for CollectionDB {
         Ok(())
     }
 
-    fn get_collection(&self) -> Result<Collection, failure::Error> {
+    fn data(&self) -> Result<Self::Data, failure::Error> {
         let mut _collection = Vec::new();
         self.read(|db| {
             for value in db.values() {
@@ -131,12 +136,67 @@ impl Custom for CollectionDB {
     }
 }
 
+impl Database for FavoritesDB {
+    type Data = HashSet<u64>;
+
+    //If file doesn't exist, create default. Load db from file.
+    fn initialize(path: &PathBuf) -> Result<Box<Self>, failure::Error> {
+        let db: FavoritesDB;
+
+        let mut db_path = path.to_path_buf();
+        db_path.push("favorites.yaml");
+
+        let exists = db_path.exists();
+        db = FavoritesDB::from_path(db_path, HashSet::new())?;
+        if !exists {
+            db.save()?;
+        }
+        db.load()?;
+
+        Ok(Box::new(db))
+    }
+
+    fn refresh(&self, _path: &PathBuf) -> Result<(), failure::Error> {
+        Ok(())
+    }
+
+    fn data(&self) -> Result<Self::Data, failure::Error> {
+        Ok(self.get_data(true)?)
+    }
+}
+
+pub fn add_favorite(
+    db: impl AsRef<FavoritesDB>,
+    hash: u64,
+) -> Result<(), rustbreak::RustbreakError> {
+    db.as_ref().load()?;
+
+    db.as_ref().write(|favorites| favorites.insert(hash))?;
+
+    db.as_ref().save()?;
+
+    Ok(())
+}
+
+pub fn remove_favorite(
+    db: impl AsRef<FavoritesDB>,
+    hash: u64,
+) -> Result<(), rustbreak::RustbreakError> {
+    db.as_ref().load()?;
+
+    db.as_ref().write(|favorites| favorites.remove(&hash))?;
+
+    db.as_ref().save()?;
+
+    Ok(())
+}
+
 pub fn startup(no_collection_update: bool) -> Result<Collection, failure::Error> {
     let collection_db = CollectionDB::initialize(&CONFIG.data_path)?;
     if !no_collection_update {
         collection_db.refresh(&CONFIG.song_path)?;
     }
-    collection_db.get_collection()
+    collection_db.data()
 }
 
 fn all_cdg(song_path: &PathBuf) -> Vec<PathBuf> {

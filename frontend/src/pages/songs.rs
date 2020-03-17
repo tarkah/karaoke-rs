@@ -15,7 +15,13 @@ pub enum Msg {
     TablePageUpdate(u32),
     SortUpdate(SortKey),
     Search(String),
+    Favorite((bool, u64)),
     ApiResponse(api::Response),
+}
+
+#[derive(Properties, Clone)]
+pub struct Props {
+    pub favorites_only: bool,
 }
 
 pub struct SongsPage {
@@ -28,13 +34,14 @@ pub struct SongsPage {
     total_pages: Option<u32>,
     sort_key: Option<SortKey>,
     sort_direction: Option<SortDirection>,
+    favorites_only: bool,
 }
 
 impl Component for SongsPage {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let api_agent = api::ApiAgent::bridge(link.callback(Msg::ApiResponse));
 
         SongsPage {
@@ -47,11 +54,25 @@ impl Component for SongsPage {
             total_pages: None,
             sort_key: None,
             sort_direction: None,
+            favorites_only: props.favorites_only,
         }
     }
 
     fn mounted(&mut self) -> ShouldRender {
         self.link.send_message(Msg::GetSongs);
+        false
+    }
+
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        self.favorites_only = props.favorites_only;
+
+        self.link.send_message(Msg::GetSongs);
+
+        self.search = None;
+        self.page_selection = None;
+        self.sort_key = None;
+        self.sort_direction = None;
+
         false
     }
 
@@ -63,6 +84,7 @@ impl Component for SongsPage {
                     query: self.search_value(),
                     sort_key: self.sort_key,
                     sort_direction: self.sort_direction,
+                    favorites_only: Some(self.favorites_only),
                     ..RequestParams::default()
                 };
                 self.api_agent.send(api::Request::GetSongs(params));
@@ -98,6 +120,14 @@ impl Component for SongsPage {
                 trace!("Search Input: {}", value);
                 self.search = Some(value);
                 self.page_selection = None;
+                self.update(Msg::GetSongs);
+            }
+            Msg::Favorite((favorite, id)) => {
+                if favorite {
+                    self.api_agent.send(api::Request::RemoveFavorite(id));
+                } else {
+                    self.api_agent.send(api::Request::AddFavorite(id));
+                }
                 self.update(Msg::GetSongs);
             }
             Msg::ApiResponse(response) => {
@@ -162,6 +192,7 @@ impl SongsPage {
 
     fn view_row(&self, song: Song) -> Html {
         let song_id = song.id;
+        let favorite = song.favorite;
 
         html! {
             <tr>
@@ -177,9 +208,14 @@ impl SongsPage {
                     <button onclick=self.link.callback(move |_| Msg::PlayNow(song_id)) class="button button-table"
                         role="button" aria-pressed="true">{ "Play" }</button>
                 </td>
+                <td class="heart-center">
+                    <button onclick=self.link.callback(move |_| Msg::Favorite((favorite, song_id))) class="button button-table"
+                        role="button" aria-pressed="true">{ self.view_favorite(favorite) }</button>
+                </td>
             </tr>
         }
     }
+
     fn view_table(&self) -> Html {
         if self.songs_fetched {
             html! {
@@ -198,6 +234,7 @@ impl SongsPage {
                                         class=self.sort_class(SortKey::Artist)>{ "Artist" }</th>
                                     <th></th>
                                     <th></th>
+                                    <th><div class="heart-header heart-center">{ "🤍" }</div></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -217,6 +254,14 @@ impl SongsPage {
             }
         } else {
             html! {}
+        }
+    }
+
+    fn view_favorite(&self, favorite: bool) -> &str {
+        if favorite {
+            "♥️"
+        } else {
+            "🤍"
         }
     }
 }

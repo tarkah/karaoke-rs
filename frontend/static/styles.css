@@ -7,6 +7,12 @@
   .button-table {
     padding: 4px 4px;
   }
+
+  .heart-header {
+    padding: 4px 4px;
+    font-size: 12px;
+    font-family: 'Noto Sans', sans-serif;
+  }
 }
 
 @media (min-width: 640px){
@@ -17,6 +23,12 @@
 
   .button-table {
     padding: 4px 4px;
+  }
+
+  .heart-header {
+    padding: 4px 4px;
+    font-size: 12px;
+    font-family: 'Noto Sans', sans-serif;
   }
 }
 
@@ -29,6 +41,12 @@
   .button-table {
     padding: 8px 16px;
   }
+
+  .heart-header {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: 'Noto Sans', sans-serif;
+  }
 }
 
 @media (min-width: 1024px){
@@ -40,6 +58,12 @@
   .button-table {
     padding: 8px 16px;
   }
+
+  .heart-header {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: 'Noto Sans', sans-serif;
+  }
 }
 
 @media (min-width: 1200px){
@@ -50,6 +74,12 @@
 
   .button-table {
     padding: 8px 16px;
+  }
+
+  .heart-header {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: 'Noto Sans', sans-serif;
   }
 }
 
@@ -65,6 +95,7 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
+  background-attachment: fixed;
   height: 100vh;
   color: rgba(255, 255, 255, 0.87);
 }
@@ -72,7 +103,6 @@ body {
 .content {
   padding-top: 16px;
   overflow: auto;
-  height: calc(100vh - 64px);
 }
 
 a {
@@ -99,7 +129,6 @@ a:hover {
   border-top-left-radius: 4px;
   border: none;
   padding: 8px;
-  margin: 4px;
   text-decoration: none;
   border-bottom: 3px solid rgba(255, 255, 255, 0.9);
   color: rgba(255, 255, 255, 0.9);
@@ -182,7 +211,6 @@ a:hover {
   resize:both;
   overflow:auto;
   padding: 8px;
-  margin: 0 4px;
 }
 
 .table th,
@@ -190,6 +218,10 @@ a:hover {
   text-align: start;
   padding: 4px 8px;
   min-width: 50px;
+}
+
+.heart-center {
+  text-align: center !important;
 }
 
 .table tbody tr:nth-child(odd),
@@ -284,6 +316,13 @@ a:hover {
 .header {
   display: flex;
   flex-direction: row;
+  align-items: center;
+}
+
+.header__navigation {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
 }
 

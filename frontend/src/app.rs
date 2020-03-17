@@ -8,6 +8,8 @@ use yew_router::{prelude::*, switch::Permissive, Switch};
 pub enum AppRoute {
     #[to = "/!"]
     Index,
+    #[to = "/favorites"]
+    Favorites,
     #[to = "/songs"]
     Songs,
     #[to = "/artists"]
@@ -106,6 +108,9 @@ impl Model {
                     <RouterAnchor<AppRoute> route=AppRoute::Index
                         classes={ if current_route=="/" { "header__navigation-item--active" } else { "header__navigation-item" }}>
                             { "Home" }</RouterAnchor<AppRoute>>
+                    <RouterAnchor<AppRoute> route=AppRoute::Favorites
+                        classes={ if current_route=="/favorites" { "header__navigation-item--active" } else { "header__navigation-item" }}>
+                            { "Favorites" }</RouterAnchor<AppRoute>>
                     <RouterAnchor<AppRoute> route=AppRoute::Songs
                         classes={ if current_route=="/songs" { "header__navigation-item--active" } else { "header__navigation-item" }}>
                             { "Songs" }</RouterAnchor<AppRoute>>
@@ -143,7 +148,8 @@ impl Model {
                     render = Router::render(move |switch: AppRoute| {
                         match switch {
                             AppRoute::Index => html!{<IndexPage />},
-                            AppRoute::Songs => html! {<SongsPage />},
+                            AppRoute::Favorites => html! {<SongsPage favorites_only=true/>},
+                            AppRoute::Songs => html! {<SongsPage favorites_only=false/>},
                             AppRoute::Artist(id) => html!{<ArtistPage artist_id=id />},
                             AppRoute::Artists => html!{<ArtistsPage />},
                             AppRoute::Queue => html!{<QueuePage />},

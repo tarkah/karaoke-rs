@@ -33,6 +33,8 @@ pub enum Request {
     GetQueue,
     AddSong(u64),
     PlaySong(u64),
+    AddFavorite(u64),
+    RemoveFavorite(u64),
     Stop,
     NextSong,
     ClearQueue,
@@ -50,6 +52,8 @@ pub enum RequestType {
     GetQueue,
     AddSong,
     PlaySong,
+    AddFavorite,
+    RemoveFavorite,
     Stop,
     NextSong,
     ClearQueue,
@@ -170,6 +174,14 @@ impl Agent for ApiAgent {
             }
             Request::Stop => {
                 let fetch_task = self.send_command(who, RequestType::Stop, None);
+                self.fetch_tasks.push(fetch_task);
+            }
+            Request::AddFavorite(id) => {
+                let fetch_task = self.send_command(who, RequestType::AddFavorite, Some(id));
+                self.fetch_tasks.push(fetch_task);
+            }
+            Request::RemoveFavorite(id) => {
+                let fetch_task = self.send_command(who, RequestType::RemoveFavorite, Some(id));
                 self.fetch_tasks.push(fetch_task);
             }
             Request::Config => {
@@ -392,6 +404,8 @@ impl RequestType {
             RequestType::NextSong => "next",
             RequestType::ClearQueue => "clear",
             RequestType::Stop => "stop",
+            RequestType::AddFavorite => "favorites/add",
+            RequestType::RemoveFavorite => "favorites/remove",
             RequestType::GetSongs => "songs",
             RequestType::GetArtists => "artists",
             RequestType::GetQueue => "queue",
