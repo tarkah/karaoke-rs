@@ -20,11 +20,13 @@ Your karaoke collection can be browsed and queued from a self served website and
 
 - [Setup](#setup)
   - [Linux](#linux)
+  - [macOS](#macos)
   - [Windows](#windows)
   - [Build from Source](#build-from-source)
 - [CLI Arguments](#cli-arguments)
 - [Screenshots](#screenshots)
   - [Songs Page](#songs-page)
+  - [Favorites Page](#favorites-page)
   - [Artists Page](#artists-page)
   - [Queue Page](#queue-page)
   - [Player](#player)
@@ -32,14 +34,20 @@ Your karaoke collection can be browsed and queued from a self served website and
 
 ## Setup
 ### Linux
-- Download latest release binary or build from source
+- Download latest [release](https://github.com/tarkah/karaoke-rs/releases/latest) or build from source
 - Run `karaoke-rs --help` to see all arguments
 - Place your song collection at `~/.local/share/karaoke-rs/songs`, or specify location via `--songs path/to/song/directory`
 - Default configuration file is created at `~/.config/karaoke-rs/config.yaml`. This can be copied / changed and specified via `--config path/to/config.yaml`
 - You may need to force disable vsync to eliminate flickering, set environment variable `vblank_mode=0`
 
+### macOS
+- Download latest [release](https://github.com/tarkah/karaoke-rs/releases/latest) or build from source
+- Run `karaoke-rs --help` to see all arguments
+- Place your song collection at `$HOME/Library/Application Support/karaoke-rs/songs`, or specify location via `--songs path/to/song/directory`
+- Default configuration file is created at `$HOME/Library/Preferences/karaoke-rs/config.yaml`. This can be copied / changed and specified via `--config path/to/config.yaml`
+
 ### Windows
-- Download latest release binary or build from source
+- Download latest [release](https://github.com/tarkah/karaoke-rs/releases/latest) or build from source
 - Double click `karaoke-rs.exe` to run with default configuration. Run from command prompt / powershell `karaoke-rs.exe --help` to see all arguments
 - Place your song collection at `%APPDATA%\karaoke-rs\songs`, or specify location via `--songs C:\path\to\song\directory`
 - Default configuration file is created at `%APPDATA%\karaoke-rs\config.yaml`. This can be copied / changed and specified via `--config C:\path\to\config.yaml`
@@ -89,6 +97,9 @@ OPTIONS:
 
 ### Songs Page
 ![songs](/screenshots/songs.png?raw=true)
+
+### Favorites Page
+![favorites](/screenshots/favorites.png?raw=true)
 
 ### Artists Page
 ![artists](/screenshots/artists.png?raw=true)
