@@ -18,7 +18,19 @@ Your karaoke collection can be browsed and queued from a self served website and
 
 **_Now includes a web player. Songs can be played from any modern browser, anywhere in the world! Use command line flag `--use-web-player` to enable this feature. Player is accessible from the `/player` page on the website and can be controlled just like the native player through commands on the queue page._**
 
-# Setup
+- [Setup](#setup)
+  - [Linux](#linux)
+  - [Windows](#windows)
+  - [Build from Source](#build-from-source)
+- [CLI Arguments](#cli-arguments)
+- [Screenshots](#screenshots)
+  - [Songs Page](#songs-page)
+  - [Artists Page](#artists-page)
+  - [Queue Page](#queue-page)
+  - [Player](#player)
+- [Acknowledgments](#acknowledgments)
+
+## Setup
 ### Linux
 - Download latest release binary or build from source
 - Run `karaoke-rs --help` to see all arguments
@@ -49,7 +61,7 @@ cargo build --release
 ```
 - Binary located at `target/release/karaoke-rs`
 
-# CLI Arguments
+## CLI Arguments
 ```
 karoake-rs 0.10.0
 tarkah <admin@tarkah.dev>
@@ -73,7 +85,7 @@ OPTIONS:
     -s, --songs <DIR>                  Sets a custom song directory
 ```
 
-# Screenshots
+## Screenshots
 
 ### Songs Page
 ![songs](/screenshots/songs.png?raw=true)
@@ -90,3 +102,9 @@ OPTIONS:
 ![player1](/screenshots/player_1.png?raw=true)
 
 ![player2](/screenshots/player_2.png?raw=true)
+
+
+## Acknowledgments
+
+- [@maxjoehnk](https://github.com/maxjoehnk) - Thanks for designing the frontend!
+- [@Keavon](https://github.com/Keavon) - Thanks for helping extensively test the new frontend & web player!
