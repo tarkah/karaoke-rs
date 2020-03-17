@@ -1,16 +1,16 @@
 trigger:
   branches:
-    include: ['master', 'azure-pipelines']
+    include: ["master", "azure-pipelines"]
   tags:
-    include: ['*']
+    include: ["*"]
 
 variables:
   rust_test_threads: 1
 
 jobs:
-  - job: 'Frontend'
+  - job: "Frontend"
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: "ubuntu-latest"
     steps:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
@@ -25,16 +25,19 @@ jobs:
       - publish: $(System.DefaultWorkingDirectory)/frontend
         artifact: frontend
 
-  - job: 'Clippy'
-    dependsOn: 'Frontend'
+  - job: "Clippy"
+    dependsOn: "Frontend"
     condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
         windows-stable:
-          imageName: 'windows-latest'
+          imageName: "windows-latest"
           rustup_toolchain: stable
         linux-stable:
-          imageName: 'ubuntu-latest'
+          imageName: "ubuntu-latest"
+          rustup_toolchain: stable
+        macos-stable:
+          imageName: "macOS-latest"
           rustup_toolchain: stable
 
     pool:
@@ -49,7 +52,7 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-        displayName: Linux Install Rust
+        displayName: Linux Darwin Install Rust
         condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - script: |
           curl -sSf -o rustup-init.exe https://win.rustup.rs
@@ -64,29 +67,31 @@ jobs:
       - task: CopyFiles@2
         displayName: Copy frontend dist folder
         inputs:
-          sourceFolder: '$(Pipeline.Workspace)/frontend/dist'
-          contents: '**'
-          targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
+          sourceFolder: "$(Pipeline.Workspace)/frontend/dist"
+          contents: "**"
+          targetFolder: "$(System.DefaultWorkingDirectory)/frontend/dist"
 
       - script: rustup component add clippy
         displayName: Install Clippy
       - script: cargo clippy
         displayName: Run Clippy
 
-
-  - job: 'Test'
-    dependsOn: 'Frontend'
+  - job: "Test"
+    dependsOn: "Frontend"
     condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     strategy:
       matrix:
         windows-stable:
-          imageName: 'windows-latest'
+          imageName: "windows-latest"
           rustup_toolchain: stable
-          target: 'x86_64-pc-windows-msvc'
+          target: "x86_64-pc-windows-msvc"
         linux-stable:
-          imageName: 'ubuntu-latest'
+          imageName: "ubuntu-latest"
           rustup_toolchain: stable
-          target: 'x86_64-unknown-linux-gnu'
+          target: "x86_64-unknown-linux-gnu"
+        macos-stable:
+          imageName: "macOS-latest"
+          rustup_toolchain: stable
 
     pool:
       vmImage: $(imageName)
@@ -100,7 +105,7 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-        displayName: Linux Install Rust
+        displayName: Linux Darwin Install Rust
         condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - script: |
           curl -sSf -o rustup-init.exe https://win.rustup.rs
@@ -115,41 +120,45 @@ jobs:
       - task: CopyFiles@2
         displayName: Copy frontend dist folder
         inputs:
-          sourceFolder: '$(Pipeline.Workspace)/frontend/dist'
-          contents: '**'
-          targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
+          sourceFolder: "$(Pipeline.Workspace)/frontend/dist"
+          contents: "**"
+          targetFolder: "$(System.DefaultWorkingDirectory)/frontend/dist"
 
       - script: cargo build
         displayName: Cargo Build
       - script: cargo test
         displayName: Cargo Test
 
-
-  - job: 'Release'
-    dependsOn: 'Frontend'
+  - job: "Release"
+    dependsOn: "Frontend"
     timeoutInMinutes: 0
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
     strategy:
       matrix:
         windows-stable:
-          imageName: 'windows-latest'
+          imageName: "windows-latest"
           rustup_toolchain: stable
-          target: 'x86_64-pc-windows-msvc'
+          target: "x86_64-pc-windows-msvc"
           docker: false
         linux-stable:
-          imageName: 'ubuntu-latest'
+          imageName: "ubuntu-latest"
           rustup_toolchain: stable
-          target: 'x86_64-unknown-linux-gnu'
+          target: "x86_64-unknown-linux-gnu"
+          docker: false
+        macos-stable:
+          imageName: "macOS-latest"
+          rustup_toolchain: stable
+          target: "x86_64-apple-darwin"
           docker: false
         armv7-stable:
-          imageName: 'ubuntu-latest'
+          imageName: "ubuntu-latest"
           rustup_toolchain: stable
-          target: 'armv7-unknown-linux-gnueabihf'
+          target: "armv7-unknown-linux-gnueabihf"
           docker: true
         aarch64-stable:
-          imageName: 'ubuntu-latest'
+          imageName: "ubuntu-latest"
           rustup_toolchain: stable
-          target: 'aarch64-unknown-linux-gnu'
+          target: "aarch64-unknown-linux-gnu"
           docker: true
 
     pool:
@@ -175,7 +184,7 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
           echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-        displayName: Linux Install Rust
+        displayName: Linux Darwin Install Rust
         condition: and( ne( variables['Agent.OS'], 'Windows_NT' ), eq( variables['docker'], 'false' ))
       - script: |
           curl -sSf -o rustup-init.exe https://win.rustup.rs
@@ -190,9 +199,9 @@ jobs:
       - task: CopyFiles@2
         displayName: Copy frontend dist folder
         inputs:
-          sourceFolder: '$(Pipeline.Workspace)/frontend/dist'
-          contents: '**'
-          targetFolder: '$(System.DefaultWorkingDirectory)/frontend/dist'
+          sourceFolder: "$(Pipeline.Workspace)/frontend/dist"
+          contents: "**"
+          targetFolder: "$(System.DefaultWorkingDirectory)/frontend/dist"
 
       - script: cargo build --release
         displayName: Cargo Build
@@ -202,59 +211,59 @@ jobs:
         condition: eq( variables['docker'], 'false' )
 
       - script: |
-         docker build -t tarkah/karaoke-rs:$TARGET ./ci/$TARGET/
+          docker build -t tarkah/karaoke-rs:$TARGET ./ci/$TARGET/
         displayName: Cross Setup Docker
         condition: eq( variables['docker'], 'true' )
       - script: |
-         docker run -v "$(pwd):/source" tarkah/karaoke-rs:$TARGET cargo build --release --manifest-path /source/Cargo.toml --target $TARGET
+          docker run -v "$(pwd):/source" tarkah/karaoke-rs:$TARGET cargo build --release --manifest-path /source/Cargo.toml --target $TARGET
         displayName: Cross Build
         condition: eq( variables['docker'], 'true' )
 
       - task: CopyFiles@2
         displayName: Copy Binary
         inputs:
-          sourceFolder: '$(Build.SourcesDirectory)'
+          sourceFolder: "$(Build.SourcesDirectory)"
           contents: |
             target/**/release/?(karaoke-rs|karaoke-rs.exe)
-          targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
+          targetFolder: "$(Build.BinariesDirectory)/karaoke-rs"
           flattenFolders: true
       - task: CopyFiles@2
         displayName: Copy Assets
         inputs:
-          sourceFolder: '$(Build.SourcesDirectory)'
+          sourceFolder: "$(Build.SourcesDirectory)"
           contents: |
             README.md
             LICENSE
             screenshots/**.*
-          targetFolder: '$(Build.BinariesDirectory)/karaoke-rs'
+          targetFolder: "$(Build.BinariesDirectory)/karaoke-rs"
 
       - task: ArchiveFiles@2
-        displayName: Linux Archive
+        displayName: Linux Darwin Archive
         inputs:
-          rootFolderOrFile: '$(Build.BinariesDirectory)/karaoke-rs'
-          archiveType: 'tar'
-          tarCompression: 'gz'
-          archiveFile: '$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).tar.gz'
+          rootFolderOrFile: "$(Build.BinariesDirectory)/karaoke-rs"
+          archiveType: "tar"
+          tarCompression: "gz"
+          archiveFile: "$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).tar.gz"
         condition: ne( variables['Agent.OS'], 'Windows_NT' )
       - task: ArchiveFiles@2
         displayName: Windows Archive
         inputs:
-          rootFolderOrFile: '$(Build.BinariesDirectory)/karaoke-rs'
-          archiveType: 'zip'
-          archiveFile: '$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).zip'
+          rootFolderOrFile: "$(Build.BinariesDirectory)/karaoke-rs"
+          archiveType: "zip"
+          archiveFile: "$(Build.ArtifactStagingDirectory)/karaoke-rs-$(build.my_tag)-$(TARGET).zip"
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
       - task: GithubRelease@0
         displayName: Publish Assets to Github Release
         condition: succeeded()
         inputs:
-          gitHubConnection: 'tarkah'
-          repositoryName: 'tarkah/karaoke-rs'
-          action: 'edit'
-          target: '$(build.sourceVersion)'
-          tagSource: 'manual'
-          tag: '$(build.my_tag)'
-          assets: '$(Build.ArtifactStagingDirectory)/*'
-          title: '$(build.my_tag) - $(build.date)'
-          assetUploadMode: 'replace'
+          gitHubConnection: "tarkah"
+          repositoryName: "tarkah/karaoke-rs"
+          action: "edit"
+          target: "$(build.sourceVersion)"
+          tagSource: "manual"
+          tag: "$(build.my_tag)"
+          assets: "$(Build.ArtifactStagingDirectory)/*"
+          title: "$(build.my_tag) - $(build.date)"
+          assetUploadMode: "replace"
           addChangeLog: false
