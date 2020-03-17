@@ -47,6 +47,7 @@ pub struct Song {
     pub name: String,
     pub artist_id: u64,
     pub artist_name: String,
+    pub favorite: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -68,6 +69,8 @@ pub struct RequestParams {
     pub sort_key: Option<SortKey>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_direction: Option<SortDirection>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub favorites_only: Option<bool>,
 }
 
 impl Default for RequestParams {
@@ -78,6 +81,7 @@ impl Default for RequestParams {
             artist_id: None,
             sort_key: None,
             sort_direction: None,
+            favorites_only: None,
         }
     }
 }

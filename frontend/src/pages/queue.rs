@@ -11,6 +11,7 @@ pub enum Msg {
     Stop,
     Next,
     GetQueue,
+    Favorite((bool, u64)),
     ApiResponse(api::Response),
 }
 
@@ -66,6 +67,14 @@ impl Component for QueuePage {
             Msg::GetQueue => {
                 self.api_agent.send(api::Request::GetQueue);
             }
+            Msg::Favorite((favorite, id)) => {
+                if favorite {
+                    self.api_agent.send(api::Request::RemoveFavorite(id));
+                } else {
+                    self.api_agent.send(api::Request::AddFavorite(id));
+                }
+                self.update(Msg::GetQueue);
+            }
             Msg::ApiResponse(response) => {
                 if let api::Response::Success(api::ResponseData::Queue(queue)) = response {
                     self.queue = queue;
@@ -95,11 +104,18 @@ impl Component for QueuePage {
 
 impl QueuePage {
     fn view_row(&self, idx: usize, song: Song) -> Html {
+        let song_id = song.id;
+        let favorite = song.favorite;
+
         html! {
             <tr>
                 <th class="text-center">{ idx + 1 }</th>
                 <td>{ song.name }</td>
                 <td class="text-center">{ song.artist_name }</td>
+                <td class="heart-center">
+                    <button onclick=self.link.callback(move |_| Msg::Favorite((favorite, song_id))) class="button button-table"
+                        role="button" aria-pressed="true">{ self.view_favorite(favorite) }</button>
+                </td>
             </tr>
         }
     }
@@ -114,6 +130,7 @@ impl QueuePage {
                                 <th class="text-center">{ "#" }</th>
                                 <th>{ "Song" }</th>
                                 <th class="text-center">{ "Artist" }</th>
+                                <th><div class="heart-header heart-center">{ "🤍" }</div></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -126,6 +143,14 @@ impl QueuePage {
                     </table>
                 </div>
             </div>
+        }
+    }
+
+    fn view_favorite(&self, favorite: bool) -> &str {
+        if favorite {
+            "♥️"
+        } else {
+            "🤍"
         }
     }
 }
